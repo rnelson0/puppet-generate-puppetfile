@@ -1,9 +1,9 @@
-Tired of searching for dependencies on the forge and hoping you got everything? Use depconvert to generate a list of modules and their dependencies in a Puppetfile format for use with r10k or librarian-puppet.
+Tired of searching for dependencies on the forge and hoping you got everything? Use generate-puppetfile to generate a list of modules and their dependencies in a Puppetfile format for use with r10k or librarian-puppet.
 
-To use this, simply clone the repository and run the depconvert script with a list of valid module names:
+To use this, simply clone the repository and run the generate-puppetfile script with a list of valid module names:
 
 ```
-$ ./depconvert echocat/nfs rnelson0/certs
+$ ./generate-puppetfile echocat/nfs rnelson0/certs
 Download echocat/nfs and its dependencies...
 Download rnelson0/certs and its dependencies...
 Module download complete. Generating Puppetfile.
