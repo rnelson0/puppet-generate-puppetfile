@@ -1,29 +1,31 @@
 #!/bin/sh
-MODULEPATH=`mktemp -d`
-LIST=`mktemp`
-for module in $*
-do
+
+MODULEPATH="$(mktemp -d)"
+LIST="$(mktemp)"
+for module in "$@"; do
   echo "Download $module and its dependencies..."
-  puppet module install $module --modulepath=$MODULEPATH > /dev/null
+  puppet module install "$module" --modulepath="$MODULEPATH" > /dev/null
 done
 
-echo "Module download complete. Generating Puppetfile."
+echo 'Module download complete. Generating Puppetfile.'
 
-puppet module list --modulepath=$MODULEPATH > $LIST
+puppet module list --modulepath="$MODULEPATH" > "$LIST"
 
-sed -i.bak "s/^\/.*/forge 'http:\/\/forge.puppetlabs.com'\n/" $LIST
-sed -i.bak "s/-/\//" $LIST
-sed -i.bak "s/├── /mod '/" $LIST
-sed -i.bak "s/└── /mod '/" $LIST
-sed -i.bak "s/ (/', '/" $LIST
-sed -i.bak "s/v\([[:digit:]]\)/1/" $LIST
-sed -i.bak "s/)/'/" $LIST
+sed -i.bak "
+	s/^\/.*/forge 'http:\/\/forge.puppetlabs.com'\n/
+	s/-/\//
+	s/├── /mod '/
+	s/└── /mod '/
+	s/ (/', '/
+	s/v\([[:digit:]]\)/1/
+	s/)/'/
+" "$LIST"
 
 echo
-echo "Here is your suggested Puppetfile:"
-echo "----------------------------------"
-echo ""
-cat $LIST
+echo 'Here is your suggested Puppetfile:'
+echo '----------------------------------'
+echo
+cat "$LIST"
 
-rm $LIST $LIST.bak
-rm -fR $MODULEPATH
+rm "$LIST" "$LIST".bak
+rm -fR "$MODULEPATH"
