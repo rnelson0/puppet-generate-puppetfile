@@ -13,10 +13,10 @@ Here is your suggested Puppetfile:
 
 forge 'http://forge.puppetlabs.com'
 
-mod 'echocat/nfs', '1.5.0'
-mod 'herculesteam/augeasproviders_core', '1.1.2'
-mod 'herculesteam/augeasproviders_shellvar', '1.2.0'
+mod 'echocat/nfs', '1.7.1'
+mod 'herculesteam/augeasproviders_core', '2.1.2'
+mod 'herculesteam/augeasproviders_shellvar', '2.2.0'
 mod 'puppetlabs/concat', '1.2.4'
-mod 'puppetlabs/stdlib', '1.9.0'
-mod 'rnelson0/certs', '1.6.2'
+mod 'puppetlabs/stdlib', '4.9.0'
+mod 'rnelson0/certs', '0.6.2'
 ```
