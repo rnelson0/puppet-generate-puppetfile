@@ -9,14 +9,15 @@ done
 
 echo "Module download complete. Generating Puppetfile."
 
-puppet module list --modulepath=$MODULEPATH > $LIST
+puppet module list --modulepath=$MODULEPATH | \
+  sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" > $LIST
 
 sed -i.bak "s/^\/.*/forge 'http:\/\/forge.puppetlabs.com'\n/" $LIST
 sed -i.bak "s/-/\//" $LIST
 sed -i.bak "s/├── /mod '/" $LIST
 sed -i.bak "s/└── /mod '/" $LIST
 sed -i.bak "s/ (/', '/" $LIST
-sed -i.bak "s/v\([[:digit:]]\)/1/" $LIST
+sed -i.bak "s/v\([[:digit:]]\)/\1/" $LIST
 sed -i.bak "s/)/'/" $LIST
 
 echo
