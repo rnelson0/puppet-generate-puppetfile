@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'generate-puppetfile'
+require 'generate_puppetfile'
 
 begin
   GeneratePuppetfile::Bin.new(ARGV).run

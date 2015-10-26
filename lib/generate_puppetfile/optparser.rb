@@ -1,3 +1,4 @@
+require 'generate_puppetfile'
 require 'optparse'
 
 class GeneratePuppetfile::OptParser
@@ -17,7 +18,7 @@ class GeneratePuppetfile::OptParser
     OptionParser.new do |opts|
       opts.banner = HELP_TEXT
 
-      options.on('-p', '--puppetfile FILE', 'Name of existing Puppetfile to verify and update.') do |file|
+      opts.on('-p', '--puppetfile FILE', 'Name of existing Puppetfile to verify and update.') do |file|
 	# something with the puppetfile
       end
     end

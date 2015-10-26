@@ -1,4 +1,5 @@
-require 'generate-puppetfile/optparser'
+require 'generate_puppetfile'
+require 'generate_puppetfile/optparser'
 
 class GeneratePuppetfile::Bin
   def initialize(args)
