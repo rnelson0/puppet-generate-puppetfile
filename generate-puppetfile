@@ -2,9 +2,27 @@
 
 MODULEPATH="$(mktemp -d)"
 LIST="$(mktemp)"
+
+function usage {
+  echo "USAGE:"
+  echo "$0 <module> [<module> ... <module>]"
+  echo ""
+}
+
+if [ -z "$@" ]
+then
+  usage
+  exit
+fi
+
 for module in "$@"; do
   echo "Download $module and its dependencies..."
   puppet module install "$module" --modulepath="$MODULEPATH" > /dev/null
+  if [ "$?" != 0 ]
+  then
+    echo "Failed to download module $module properly. Check the name and internet connectivity and try again."
+    exit
+  fi
 done
 
 echo 'Module download complete. Generating Puppetfile.'
