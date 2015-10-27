@@ -9,6 +9,11 @@ module GeneratePuppetfile
         opts.banner = "generate-puppetfile [OPTIONS] [<MODULE> ... <MODULE>]"
 
         opts.on('-p', '--puppetfile FILE', 'Name of existing Puppetfile to verify and update') do |file|
+          unless File.readable?(file)
+            puts "\nPuppetfile '#{file}' cannot be read. Are you sure you passed in the correct filename?\n\n"
+            exit 1
+          end
+
 	  options[:puppetfile] = file
         end
 
