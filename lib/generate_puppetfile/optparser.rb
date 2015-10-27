@@ -1,26 +1,28 @@
 require 'generate_puppetfile'
 require 'optparse'
 
-class GeneratePuppetfile::OptParser
-  HELP_TEXT = <<-EOF
+module GeneratePuppetfile
+  class OptParser
+    def self.parse(args)
+      options = {}
+      opts = OptionParser.new do |opts|
+        opts.banner = "generate-puppetfile [OPTIONS] [<MODULE> ... <MODULE>]"
 
-    generate-puppetfile <MODULE> [<MODULE> ... <MODULE>]
-      or
-    generate-puppetfile -P PUPPETFILE [<MODULE> ... <MODULE>]
+        opts.on('-p', '--puppetfile FILE', 'Name of existing Puppetfile to verify and update') do |file|
+	  options[:puppetfile] = file
+        end
 
-        MODULE       Name of a module on the forge in format 'author/name'
-        PUPPETFILE   Location of an existing Puppetfile to verify and update
+	opts.on('-d', '--debug', 'Enable debug logging') do
+	  options[:debug] = true
+	end
 
-    Option:
-  EOF
-
-  def self.build
-    OptionParser.new do |opts|
-      opts.banner = HELP_TEXT
-
-      opts.on('-p', '--puppetfile FILE', 'Name of existing Puppetfile to verify and update.') do |file|
-	# something with the puppetfile
+	opts.on_tail('-v', '--version', 'Show version') do
+	  puts "generate-puppetfile v#{GeneratePuppetfile::VERSION}"
+	end
       end
+     
+      opts.parse!(args)
+      options
     end
   end
 end
