@@ -4,14 +4,25 @@ require 'generate_puppetfile/optparser'
 require 'fileutils'
 
 module GeneratePuppetfile
+  # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
     Module_regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
     @options = {}
 
+    # Public: Initialize a new GeneratePuppetfile::Bin
+    #
+    # args - Array of command line arguments as Strings to be passed to GeneratePuppetfile::OptParser.parse
+    #
+    # Example:
+    #
+    #   GeneratePuppetfile::Bin.new(ARGV).run
     def initialize(args)
       @args = args
     end
 
+    # Public: Run generate-puppetfile at the command line.
+    #
+    # Returns an Integer exit code for the shell ($?)
     def run
       @options = GeneratePuppetfile::OptParser.parse(@args)
 
@@ -44,7 +55,7 @@ module GeneratePuppetfile
       forge_module_list.push(*cli_modules) if @args
       forge_module_list.push(*puppetfile_contents[:modules]) if puppetfile_contents[:modules]
 
-      list_modules(forge_module_list) if puppetfile_contents && @options[:debug]
+      list_forge_modules(forge_module_list) if puppetfile_contents && @options[:debug]
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
       generate_puppetfile_contents(forge_module_list, puppetfile_contents[:extras])
@@ -52,13 +63,15 @@ module GeneratePuppetfile
       return 0
     end
 
+    # Public: Validates that a provided module name is valid.
     def validate (modulename)
       success = (modulename =~ /[a-z0-9_]\/[a-z0-9_]/i)
       puts "    '#{modulename}' is not a valid module name. Skipping." unless success
       success
     end
 
-    def list_modules (module_list)
+    # Public: Display the list of Forge modules collected.
+    def list_forge_modules (module_list)
       puts "\nListing discovered modules from CLI and/or Puppetfile:\n\n"
       module_list.each do |name|
 	puts "    #{name}"
@@ -66,6 +79,7 @@ module GeneratePuppetfile
       puts ""
     end
 
+    # Public: Display the list of extra statements found in the Puppetfile.
     def list_extras (extras)
       puts "\nExtras found in the existing Puppetfile:\n\n"
       extras.each do |line|
@@ -74,6 +88,7 @@ module GeneratePuppetfile
       puts ""
     end
 
+    # Public: Read and parse the contents of an existing Puppetfile
     def read_puppetfile (puppetfile)
       puppetfile_contents = {
 	:modules => Array.new,
@@ -97,18 +112,19 @@ module GeneratePuppetfile
       puppetfile_contents
     end
 
+    # Public: Generate a new Puppetfile's contents based on a list of modules
+    # and any extras found in an existing Puppetfile.
+    #
+    # module_list is an array of forge module names to be downloaded
+    # extras is an array of strings
     def generate_puppetfile_contents (module_list, extras = [])
-      # cli_modules is a hash of module name => version
-      # puppetfile_contents is a hash with two keys:
-      #   module_list is an array of forge module names to be downloaded
-      #   extras is an array of strings
       workspace = `mktemp -d`
 
       modulepath = "--modulepath #{workspace.chomp} "
       silence    = '>/dev/null 2>&1 '
       strip_colors = 'sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"'
 
-      puts "\nInstalling modules. This may take a few minutes.\n\n"
+      puts "\nInstalling modules. This may take a few minutes.\n"
       module_list.each do |name|
 	command  = "puppet module install #{name} "
 	command += modulepath + silence

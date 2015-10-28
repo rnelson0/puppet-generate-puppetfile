@@ -2,7 +2,11 @@ require 'generate_puppetfile'
 require 'optparse'
 
 module GeneratePuppetfile
+  # Internal: Parse the options provided to generate-puppetfile
   class OptParser
+    # Internal: Initialize the OptionParser
+    #
+    # Returns an OptionParser object.
     def self.parse(args)
       options = {}
       opts = OptionParser.new do |opts|
