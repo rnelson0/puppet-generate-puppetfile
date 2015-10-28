@@ -6,17 +6,18 @@ require 'fileutils'
 module GeneratePuppetfile
   class Bin
     Module_regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
+    @options = {}
 
     def initialize(args)
       @args = args
     end
 
     def run
-      options = GeneratePuppetfile::OptParser.parse(@args)
+      @options = GeneratePuppetfile::OptParser.parse(@args)
 
       helpmsg = "generate-puppetfile: try 'generate-puppetfile --help' for more information."
 
-      if @args[0].nil? && (! options[:puppetfile])
+      if @args[0].nil? && (! @options[:puppetfile])
         puts "generate-puppetfile: No modules or existing Puppetfile specified."
         puts helpmsg
         return 1
@@ -25,61 +26,50 @@ module GeneratePuppetfile
       forge_module_list = Array.new
 
       if @args
-	puts "Processing modules from the command line..."
+	puts "\nProcessing modules from the command line...\n\n" if @options[:debug]
         cli_modules = Array.new
         @args.each do |modulename|
 	  validate(modulename) && (cli_modules.push(modulename))
         end
-
-	if options[:debug]
-          puts "Modules from the CLI:"
-	  cli_modules.each do |name|
-	    puts "    #{name}"
-	  end
-	end
       end
 
       puppetfile_contents = Hash.new
       extras = Array.new
-      if options[:puppetfile]
-	puts "Processing the puppetfile '#{options[:puppetfile]}'..."
-	puppetfile_contents = read_puppetfile(options[:puppetfile])
+      if @options[:puppetfile]
+	puts "\nProcessing the puppetfile '#{@options[:puppetfile]}'...\n\n" if @options[:debug]
+	puppetfile_contents = read_puppetfile(@options[:puppetfile])
 	extras = puppetfile_contents[:extras]
-
-	if options[:debug]
-	  puts "Modules from the Puppetfile:"
-	  puppetfile_contents[:modules].each do |name|
-	    puts "    #{name}"
-	  end
-	end
       end
 
       forge_module_list.push(*cli_modules) if @args
       forge_module_list.push(*puppetfile_contents[:modules]) if puppetfile_contents[:modules]
 
-      list_modules(forge_module_list) if puppetfile_contents
-      list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras]
+      list_modules(forge_module_list) if puppetfile_contents && @options[:debug]
+      list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
       generate_puppetfile_contents(forge_module_list, puppetfile_contents[:extras])
     end
 
     def validate (modulename)
       success = (modulename =~ /[a-z0-9_]\/[a-z0-9_]/i)
-      puts "'#{modulename}' is not a valid module name. Skipping." unless success
+      puts "    '#{modulename}' is not a valid module name. Skipping." unless success
       success
     end
 
     def list_modules (module_list)
-      puts "Starting to list modules"
+      puts "\nListing discovered modules from CLI and/or Puppetfile:\n\n"
       module_list.each do |name|
-	puts name
+	puts "    #{name}"
       end
+      puts ""
     end
 
     def list_extras (extras)
+      puts "\nExtras found in the existing Puppetfile:\n\n"
       extras.each do |line|
-	puts line
+	puts "    #{line}"
       end
+      puts ""
     end
 
     def read_puppetfile (puppetfile)
@@ -89,15 +79,15 @@ module GeneratePuppetfile
       }
 
       File.foreach(puppetfile) do |line|
-	print "GOT #{line}"
 	if Module_regex.match(line)
-	  print "  (looks like a forge module)\n"
 	  name = $1
+	  print "    #{name} looks like a forge module.\n" if @options[:debug]
 	  puppetfile_contents[:modules].push(name)
 	else
 	  next if line =~ /^forge/
 	  next if line =~ /^\s+$/
 	  next if line =~ /# Discovered elements from existing Puppetfile/
+
 	  puppetfile_contents[:extras].push(line)
 	end
       end
@@ -108,13 +98,15 @@ module GeneratePuppetfile
     def generate_puppetfile_contents (module_list, extras = [])
       # cli_modules is a hash of module name => version
       # puppetfile_contents is a hash with two keys:
-      #   module_list is a hash of module name => version
+      #   module_list is an array of forge module names to be downloaded
       #   extras is an array of strings
       workspace = `mktemp -d`
 
       modulepath = "--modulepath #{workspace.chomp} "
       silence    = '>/dev/null 2>&1 '
       strip_colors = 'sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"'
+
+      puts "\nInstalling modules. This may take a few minutes.\n\n"
       module_list.each do |name|
 	command  = "puppet module install #{name} "
 	command += modulepath + silence
@@ -128,14 +120,15 @@ forge 'http://forge.puppetlabs.com'
 # Modules discovered by generate-puppetfile
       EOF
 
-      puppetfile_body = `puppet module list #{modulepath} | #{strip_colors} 2>/dev/null`
+      puppetfile_body = `puppet module list #{modulepath} 2>/dev/null | #{strip_colors}`
 
       puppetfile_body.gsub!(/^\/.*$/, '')
       puppetfile_body.gsub!(/-/,    '/')
       puppetfile_body.gsub!(/├── /, "mod '")
       puppetfile_body.gsub!(/└── /, "mod '")
       puppetfile_body.gsub!(/ \(v/, "', '")
-      puppetfile_body.gsub!(/\)$/,  '')
+      puppetfile_body.gsub!(/\)$/,  "'")
+      puppetfile_body.gsub!(/^$\n/, '')
 
       puppetfile_footer = "# Discovered elements from existing Puppetfile\n"
       extras.each do |line|
@@ -143,6 +136,8 @@ forge 'http://forge.puppetlabs.com'
       end
 
       puts <<-EOF
+
+
 Your Puppetfile has been generated. Copy and paste between the markers:
 
 =======================================================================
