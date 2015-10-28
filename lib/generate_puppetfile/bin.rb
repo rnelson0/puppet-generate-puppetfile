@@ -48,6 +48,8 @@ module GeneratePuppetfile
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
       generate_puppetfile_contents(forge_module_list, puppetfile_contents[:extras])
+
+      return 0
     end
 
     def validate (modulename)
@@ -133,7 +135,7 @@ forge 'http://forge.puppetlabs.com'
       puppetfile_footer = "# Discovered elements from existing Puppetfile\n"
       extras.each do |line|
 	puppetfile_footer += "#{line}"
-      end
+      end if extras
 
       puts <<-EOF
 

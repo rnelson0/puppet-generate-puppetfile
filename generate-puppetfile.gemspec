@@ -1,3 +1,8 @@
+lib = File.expand_path('../lib/', __FILE__)
+$:.unshift lib unless $:.include?(lib)
+
+require 'generate_puppetfile/version'
+
 Gem::Specification.new do |s|
   s.name        = 'generate-puppetfile'
   s.version     = GeneratePuppetfile::VERSION
@@ -12,4 +17,8 @@ Gem::Specification.new do |s|
   s.files      += Dir.glob("lib/**/*")
   s.homepage    = 'https://github.com/rnelson0/puppet-generate-puppetfile'
   s.license     = 'MIT'
+
+  s.add_development_dependency 'rake'
+  s.add_development_dependency 'rspec'
+  s.add_development_dependency 'rspec-its'
 end

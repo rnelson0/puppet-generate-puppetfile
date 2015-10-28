@@ -1,2 +1,5 @@
 *.gem
 *.sw?
+vendor/
+Gemfile.lock
+.bundle/
