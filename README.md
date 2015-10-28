@@ -1,3 +1,5 @@
+[![Gem Version](https://badge.fury.io/rb/generate-puppetfile.svg)](https://badge.fury.io/rb/generate-puppetfile)
+
 Tired of searching for dependencies on the forge and hoping you got everything? Use generate-puppetfile to generate a list of modules and their dependencies in a Puppetfile format for use with r10k or librarian-puppet.
 
 To use this, simply clone the repository and run the generate-puppetfile script with a list of valid module names:
