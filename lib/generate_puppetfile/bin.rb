@@ -37,19 +37,19 @@ module GeneratePuppetfile
       forge_module_list = Array.new
 
       if @args
-	puts "\nProcessing modules from the command line...\n\n" if @options[:debug]
+        puts "\nProcessing modules from the command line...\n\n" if @options[:debug]
         cli_modules = Array.new
         @args.each do |modulename|
-	  validate(modulename) && (cli_modules.push(modulename))
+          validate(modulename) && (cli_modules.push(modulename))
         end
       end
 
       puppetfile_contents = Hash.new
       extras = Array.new
       if @options[:puppetfile]
-	puts "\nProcessing the puppetfile '#{@options[:puppetfile]}'...\n\n" if @options[:debug]
-	puppetfile_contents = read_puppetfile(@options[:puppetfile])
-	extras = puppetfile_contents[:extras]
+        puts "\nProcessing the puppetfile '#{@options[:puppetfile]}'...\n\n" if @options[:debug]
+        puppetfile_contents = read_puppetfile(@options[:puppetfile])
+        extras = puppetfile_contents[:extras]
       end
 
       forge_module_list.push(*cli_modules) if @args
@@ -74,7 +74,7 @@ module GeneratePuppetfile
     def list_forge_modules (module_list)
       puts "\nListing discovered modules from CLI and/or Puppetfile:\n\n"
       module_list.each do |name|
-	puts "    #{name}"
+        puts "    #{name}"
       end
       puts ""
     end
@@ -83,7 +83,7 @@ module GeneratePuppetfile
     def list_extras (extras)
       puts "\nExtras found in the existing Puppetfile:\n\n"
       extras.each do |line|
-	puts "    #{line}"
+        puts "    #{line}"
       end
       puts ""
     end
@@ -91,22 +91,22 @@ module GeneratePuppetfile
     # Public: Read and parse the contents of an existing Puppetfile
     def read_puppetfile (puppetfile)
       puppetfile_contents = {
-	:modules => Array.new,
-	:extras  => Array.new,
+        :modules => Array.new,
+        :extras  => Array.new,
       }
 
       File.foreach(puppetfile) do |line|
-	if Module_regex.match(line)
-	  name = $1
-	  print "    #{name} looks like a forge module.\n" if @options[:debug]
-	  puppetfile_contents[:modules].push(name)
-	else
-	  next if line =~ /^forge/
-	  next if line =~ /^\s+$/
-	  next if line =~ /# Discovered elements from existing Puppetfile/
+        if Module_regex.match(line)
+          name = $1
+          print "    #{name} looks like a forge module.\n" if @options[:debug]
+          puppetfile_contents[:modules].push(name)
+        else
+          next if line =~ /^forge/
+          next if line =~ /^\s+$/
+          next if line =~ /# Discovered elements from existing Puppetfile/
 
-	  puppetfile_contents[:extras].push(line)
-	end
+          puppetfile_contents[:extras].push(line)
+        end
       end
 
       puppetfile_contents
@@ -126,10 +126,10 @@ module GeneratePuppetfile
 
       puts "\nInstalling modules. This may take a few minutes.\n"
       module_list.each do |name|
-	command  = "puppet module install #{name} "
-	command += modulepath + silence
-	
-	system(command)
+        command  = "puppet module install #{name} "
+        command += modulepath + silence
+
+        system(command)
       end
 
       puppetfile_header = <<-EOF
@@ -139,6 +139,7 @@ forge 'http://forge.puppetlabs.com'
       EOF
 
       puppetfile_body = `puppet module list #{modulepath} 2>/dev/null | #{strip_colors}`
+      puts puppetfile_body
 
       puppetfile_body.gsub!(/^\/.*$/, '')
       puppetfile_body.gsub!(/-/,    '/')
@@ -150,11 +151,10 @@ forge 'http://forge.puppetlabs.com'
 
       puppetfile_footer = "# Discovered elements from existing Puppetfile\n"
       extras.each do |line|
-	puppetfile_footer += "#{line}"
+        puppetfile_footer += "#{line}"
       end if extras
 
       puts <<-EOF
-
 
 Your Puppetfile has been generated. Copy and paste between the markers:
 
