@@ -2,6 +2,7 @@
 require 'generate_puppetfile'
 require 'generate_puppetfile/optparser'
 require 'fileutils'
+require 'tempfile'
 
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
@@ -45,7 +46,7 @@ module GeneratePuppetfile
       end
 
       puppetfile_contents = Hash.new
-      extras = Array.new
+      extras = []
       if @options[:puppetfile]
         puts "\nProcessing the puppetfile '#{@options[:puppetfile]}'...\n\n" if @options[:debug]
         puppetfile_contents = read_puppetfile(@options[:puppetfile])
@@ -58,7 +59,7 @@ module GeneratePuppetfile
       list_forge_modules(forge_module_list) if puppetfile_contents && @options[:debug]
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
-      generate_puppetfile_contents(forge_module_list, puppetfile_contents[:extras])
+      generate_puppetfile_contents(forge_module_list, extras)
 
       return 0
     end
@@ -117,12 +118,16 @@ module GeneratePuppetfile
     #
     # module_list is an array of forge module names to be downloaded
     # extras is an array of strings
-    def generate_puppetfile_contents (module_list, extras = [])
-      workspace = `mktemp -d`
+    def generate_puppetfile_contents (module_list, extras)
+      unless module_list != [] || extras != []
+	puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n"
+	exit 1
+      end
+
+      workspace = Dir.mktmpdir
 
       modulepath = "--modulepath #{workspace.chomp} "
       silence    = '>/dev/null 2>&1 '
-      strip_colors = 'sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"'
 
       puts "\nInstalling modules. This may take a few minutes.\n"
       module_list.each do |name|
@@ -138,16 +143,16 @@ forge 'http://forge.puppetlabs.com'
 # Modules discovered by generate-puppetfile
       EOF
 
-      puppetfile_body = `puppet module list #{modulepath} 2>/dev/null | #{strip_colors}`
-      puts puppetfile_body
+      puppetfile_body = `puppet module list #{modulepath} 2>/dev/null`
 
+      puppetfile_body.gsub!(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]/, '') # Strips ANSI color codes
       puppetfile_body.gsub!(/^\/.*$/, '')
-      puppetfile_body.gsub!(/-/,    '/')
-      puppetfile_body.gsub!(/├── /, "mod '")
-      puppetfile_body.gsub!(/└── /, "mod '")
-      puppetfile_body.gsub!(/ \(v/, "', '")
-      puppetfile_body.gsub!(/\)$/,  "'")
-      puppetfile_body.gsub!(/^$\n/, '')
+      puppetfile_body.gsub!(/-/,      '/')
+      puppetfile_body.gsub!(/├── /,   "mod '")
+      puppetfile_body.gsub!(/└── /,   "mod '")
+      puppetfile_body.gsub!(/ \(v/,   "', '")
+      puppetfile_body.gsub!(/\)$/,    "'")
+      puppetfile_body.gsub!(/^$\n/,   '')
 
       puppetfile_footer = "# Discovered elements from existing Puppetfile\n"
       extras.each do |line|
