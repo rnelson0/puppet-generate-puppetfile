@@ -8,7 +8,9 @@ module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
     Module_regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
-    @options = {}
+    @options = {}    # Options hash
+    @workspace = nil # Working directory for module download and inspection
+    Silence   = '>/dev/null 2>&1 '
 
     # Public: Initialize a new GeneratePuppetfile::Bin
     #
@@ -59,9 +61,39 @@ module GeneratePuppetfile
       list_forge_modules(forge_module_list) if puppetfile_contents && @options[:debug]
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
-      generate_puppetfile_contents(forge_module_list, extras)
+      unless forge_module_list != [] || puppetfile_contents[:extras] != []
+	puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n"
+	exit 1
+      end
+
+      create_workspace()
+      @modulepath = "--modulepath #{@workspace} "
+
+      download_modules(forge_module_list)
+      puppetfile_contents = generate_puppetfile_contents(extras)
+
+
+      if @options[:silent]
+	#create_puppetfile(puppetfile_contents)
+      else
+	display_puppetfile(puppetfile_contents)
+      end
+
+      cleanup_workspace()
 
       return 0
+    end
+
+    # Public: Display the generated Puppetfile to STDOUT with delimiters
+    def display_puppetfile(puppetfile_contents)
+      puts <<-EOF
+
+Your Puppetfile has been generated. Copy and paste between the markers:
+
+=======================================================================
+#{puppetfile_contents}
+=======================================================================
+      EOF
     end
 
     # Public: Validates that a provided module name is valid.
@@ -113,29 +145,40 @@ module GeneratePuppetfile
       puppetfile_contents
     end
 
-    # Public: Generate a new Puppetfile's contents based on a list of modules
-    # and any extras found in an existing Puppetfile.
+    # Public: Download the list of modules and their dependencies to @workspace
     #
     # module_list is an array of forge module names to be downloaded
-    # extras is an array of strings
-    def generate_puppetfile_contents (module_list, extras)
-      unless module_list != [] || extras != []
-	puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n"
-	exit 1
-      end
-
-      workspace = Dir.mktmpdir
-
-      modulepath = "--modulepath #{workspace.chomp} "
-      silence    = '>/dev/null 2>&1 '
-
+    def download_modules(module_list)
       puts "\nInstalling modules. This may take a few minutes.\n"
       module_list.each do |name|
         command  = "puppet module install #{name} "
-        command += modulepath + silence
+        command += @modulepath + Silence
 
         system(command)
       end
+    end
+    
+    # Public: generate the list of modules in Puppetfile format from the @workspace
+    def generate_module_output ()
+      module_output = `puppet module list #{@modulepath} 2>/dev/null`
+
+      module_output.gsub!(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]/, '') # Strips ANSI color codes
+      module_output.gsub!(/^\/.*$/, '')
+      module_output.gsub!(/-/,      '/')
+      module_output.gsub!(/├── /,   "mod '")
+      module_output.gsub!(/└── /,   "mod '")
+      module_output.gsub!(/ \(v/,   "', '")
+      module_output.gsub!(/\)$/,    "'")
+      module_output.gsub!(/^$\n/,   '')
+
+      module_output
+    end
+
+    # Public: Generate a new Puppetfile's contents based on a list of modules
+    # and any extras found in an existing Puppetfile.
+    #
+    # extras is an array of strings
+    def generate_puppetfile_contents (extras)
 
       puppetfile_header = <<-EOF
 forge 'http://forge.puppetlabs.com'
@@ -143,34 +186,30 @@ forge 'http://forge.puppetlabs.com'
 # Modules discovered by generate-puppetfile
       EOF
 
-      puppetfile_body = `puppet module list #{modulepath} 2>/dev/null`
-
-      puppetfile_body.gsub!(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]/, '') # Strips ANSI color codes
-      puppetfile_body.gsub!(/^\/.*$/, '')
-      puppetfile_body.gsub!(/-/,      '/')
-      puppetfile_body.gsub!(/├── /,   "mod '")
-      puppetfile_body.gsub!(/└── /,   "mod '")
-      puppetfile_body.gsub!(/ \(v/,   "', '")
-      puppetfile_body.gsub!(/\)$/,    "'")
-      puppetfile_body.gsub!(/^$\n/,   '')
+      puppetfile_body = generate_module_output()
 
       puppetfile_footer = "# Discovered elements from existing Puppetfile\n"
       extras.each do |line|
         puppetfile_footer += "#{line}"
       end if extras
 
-      puts <<-EOF
-
-Your Puppetfile has been generated. Copy and paste between the markers:
-
-=======================================================================
+      puppetfile_contents = <<-EOF
 #{puppetfile_header}
 #{puppetfile_body}
 #{puppetfile_footer}
-=======================================================================
       EOF
 
-      FileUtils.rm_rf(workspace)
+      return puppetfile_contents
+    end
+
+    # Public: Create a temporary workspace for module manipulation
+    def create_workspace()
+      @workspace = (Dir.mktmpdir).chomp
+    end
+
+    # Public: Remove the workspace (with prejudice)
+    def cleanup_workspace ()
+      FileUtils.rm_rf(@workspace)
     end
   end
 end
