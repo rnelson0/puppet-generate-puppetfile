@@ -21,12 +21,22 @@ module GeneratePuppetfile
 	  options[:puppetfile] = file
         end
 
+	opts.on('-c', '--create_puppetfile', 'Create a Puppetfile in the working directory. Warning: overwrites any existing file with the same name.') do
+	  options[:create_puppetfile] = true
+	end
+
+	opts.on('-s', '--silent', 'Run in silent mode. Supresses all non-debug output. Adds the -c flag automatically.') do
+	  options[:silent] = true
+	  options[:create_puppetfile] = true
+	end
+
 	opts.on('-d', '--debug', 'Enable debug logging') do
 	  options[:debug] = true
 	end
 
 	opts.on_tail('-v', '--version', 'Show version') do
 	  puts "generate-puppetfile v#{GeneratePuppetfile::VERSION}"
+	  exit
 	end
       end
      
