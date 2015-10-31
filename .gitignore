@@ -3,3 +3,4 @@
 vendor/
 Gemfile.lock
 .bundle/
+Puppetfile

@@ -32,7 +32,7 @@ module GeneratePuppetfile
       helpmsg = "generate-puppetfile: try 'generate-puppetfile --help' for more information."
 
       if @args[0].nil? && (! @options[:puppetfile])
-        puts "generate-puppetfile: No modules or existing Puppetfile specified."
+        $stderr.puts "generate-puppetfile: No modules or existing Puppetfile specified."
         puts helpmsg
         return 1
       end
@@ -62,8 +62,8 @@ module GeneratePuppetfile
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
       unless forge_module_list != [] || puppetfile_contents[:extras] != []
-	puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n"
-	exit 1
+        $stderr.puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n"
+        return 1
       end
 
       create_workspace()
@@ -73,10 +73,12 @@ module GeneratePuppetfile
       puppetfile_contents = generate_puppetfile_contents(extras)
 
 
-      if @options[:silent]
-	#create_puppetfile(puppetfile_contents)
-      else
-	display_puppetfile(puppetfile_contents)
+      if @options[:create_puppetfile]
+        create_puppetfile(puppetfile_contents)
+      end
+
+      unless @options[:silent]
+        display_puppetfile(puppetfile_contents)
       end
 
       cleanup_workspace()
@@ -91,34 +93,46 @@ module GeneratePuppetfile
 Your Puppetfile has been generated. Copy and paste between the markers:
 
 =======================================================================
-#{puppetfile_contents}
+#{puppetfile_contents.chomp}
 =======================================================================
       EOF
+    end
+
+    # Public: Create a Puppetfile on disk
+    # The Puppetfile will be called 'Puppetfile' in the current working directory
+    def create_puppetfile (puppetfile_contents)
+      File.open('Puppetfile', 'w') do |file|
+        file.write puppetfile_contents
+      end
     end
 
     # Public: Validates that a provided module name is valid.
     def validate (modulename)
       success = (modulename =~ /[a-z0-9_]\/[a-z0-9_]/i)
-      puts "    '#{modulename}' is not a valid module name. Skipping." unless success
+      $stderr.puts "'#{modulename}' is not a valid module name. Skipping." unless success
       success
     end
 
     # Public: Display the list of Forge modules collected.
     def list_forge_modules (module_list)
-      puts "\nListing discovered modules from CLI and/or Puppetfile:\n\n"
-      module_list.each do |name|
-        puts "    #{name}"
+      unless @options[:silent]
+        puts "\nListing discovered modules from CLI and/or Puppetfile:\n\n"
+        module_list.each do |name|
+          puts "    #{name}"
+        end
+        puts ""
       end
-      puts ""
     end
 
     # Public: Display the list of extra statements found in the Puppetfile.
     def list_extras (extras)
-      puts "\nExtras found in the existing Puppetfile:\n\n"
-      extras.each do |line|
-        puts "    #{line}"
+      unless @options[:silent] || (extras == [])
+        puts "\nExtras found in the existing Puppetfile:\n\n"
+        extras.each do |line|
+          puts "    #{line}"
+        end
+        puts ""
       end
-      puts ""
     end
 
     # Public: Read and parse the contents of an existing Puppetfile
@@ -149,7 +163,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     #
     # module_list is an array of forge module names to be downloaded
     def download_modules(module_list)
-      puts "\nInstalling modules. This may take a few minutes.\n"
+      puts "\nInstalling modules. This may take a few minutes.\n" unless @options[:silent]
       module_list.each do |name|
         command  = "puppet module install #{name} "
         command += @modulepath + Silence
@@ -180,26 +194,20 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     # extras is an array of strings
     def generate_puppetfile_contents (extras)
 
-      puppetfile_header = <<-EOF
+      puppetfile_contents = <<-EOF
 forge 'http://forge.puppetlabs.com'
 
 # Modules discovered by generate-puppetfile
       EOF
 
-      puppetfile_body = generate_module_output()
+      puppetfile_contents += generate_module_output()
 
-      puppetfile_footer = "# Discovered elements from existing Puppetfile\n"
+      puppetfile_contents += "# Discovered elements from existing Puppetfile\n" unless extras == []
       extras.each do |line|
-        puppetfile_footer += "#{line}"
-      end if extras
+        puppetfile_contents += "#{line}"
+      end unless extras == []
 
-      puppetfile_contents = <<-EOF
-#{puppetfile_header}
-#{puppetfile_body}
-#{puppetfile_footer}
-      EOF
-
-      return puppetfile_contents
+      puppetfile_contents
     end
 
     # Public: Create a temporary workspace for module manipulation
