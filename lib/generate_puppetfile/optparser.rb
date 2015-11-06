@@ -9,6 +9,9 @@ module GeneratePuppetfile
     # Returns an OptionParser object.
     def self.parse(args)
       options = {}
+      # Default values
+      options[:modulename] = 'profile'
+
       opts = OptionParser.new do |opts|
         opts.banner = "generate-puppetfile [OPTIONS] [<MODULE> ... <MODULE>]"
 
@@ -18,26 +21,34 @@ module GeneratePuppetfile
             exit 1
           end
 
-	  options[:puppetfile] = file
+          options[:puppetfile] = file
         end
 
-	opts.on('-c', '--create_puppetfile', 'Create a Puppetfile in the working directory. Warning: overwrites any existing file with the same name.') do
-	  options[:create_puppetfile] = true
-	end
+        opts.on('-c', '--create_puppetfile', 'Create a Puppetfile in the working directory. Warning: overwrites any existing file with the same name.') do
+          options[:create_puppetfile] = true
+        end
 
-	opts.on('-s', '--silent', 'Run in silent mode. Supresses all non-debug output. Adds the -c flag automatically.') do
-	  options[:silent] = true
-	  options[:create_puppetfile] = true
-	end
+        opts.on('-f', '--fixtures', 'Create a .fixtures.yml file in the working directory. Somewhat naive.') do
+          options[:create_fixtures] = true
+        end
 
-	opts.on('-d', '--debug', 'Enable debug logging') do
-	  options[:debug] = true
-	end
+        opts.on('-m', '--modulename NAME', "Name of the module the fixtures file will be used with. Optional. Defaults to 'profile'.") do |name|
+          options[:modulename] = name
+        end
 
-	opts.on_tail('-v', '--version', 'Show version') do
-	  puts "generate-puppetfile v#{GeneratePuppetfile::VERSION}"
-	  exit
-	end
+        opts.on('-s', '--silent', 'Run in silent mode. Supresses all non-debug output. Adds the -c flag automatically.') do
+          options[:silent] = true
+          options[:create_puppetfile] = true
+        end
+
+        opts.on('-d', '--debug', 'Enable debug logging') do
+          options[:debug] = true
+        end
+
+        opts.on_tail('-v', '--version', 'Show version') do
+          puts "generate-puppetfile v#{GeneratePuppetfile::VERSION}"
+          exit
+        end
       end
      
       opts.parse!(args)

@@ -3,6 +3,7 @@ require 'generate_puppetfile'
 require 'generate_puppetfile/optparser'
 require 'fileutils'
 require 'tempfile'
+require 'json'
 
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
@@ -57,7 +58,6 @@ module GeneratePuppetfile
 
       forge_module_list.push(*cli_modules) if @args
       forge_module_list.push(*puppetfile_contents[:modules]) if puppetfile_contents[:modules]
-
       list_forge_modules(forge_module_list) if puppetfile_contents && @options[:debug]
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
@@ -79,6 +79,11 @@ module GeneratePuppetfile
 
       unless @options[:silent]
         display_puppetfile(puppetfile_contents)
+      end
+
+      if @options[:create_fixtures]
+        fixtures_data = generate_fixtures_data()
+        write_fixtures_data(fixtures_data)
       end
 
       cleanup_workspace()
@@ -219,5 +224,39 @@ forge 'http://forge.puppetlabs.com'
     def cleanup_workspace ()
       FileUtils.rm_rf(@workspace)
     end
+
+    # Public: Generate a simple fixtures file.
+    def generate_fixtures_data ()
+      puts "\nGenerating .fixtures.yml using module name #{@options[:modulename]}" unless @options[:silent]
+
+      # Header for fixtures file creates a symlink for the current module"
+      fixtures_data = <<-EOF
+fixtures:
+  symlinks:
+    #{@options[:modulename]}: "\#{source_dir}"
+      EOF
+
+
+      module_directories = Dir.glob("#{@workspace}/*")
+      if (module_directories != [])
+        fixtures_data += "  repositories:\n"
+      end
+      module_directories.each do |module_directory|
+        name = File.basename(module_directory)
+        file = File.read("#{module_directory}/metadata.json")
+        project_page = (JSON.parse(file))["project_page"]
+        fixtures_data += "    #{name}: #{project_page}\n"
+        puts "Found a module '#{name}' with a project page of #{project_page}." if @options[:debug]
+      end unless module_directories == []
+
+      fixtures_data
+    end
+
+    def write_fixtures_data (data)
+      File.open('.fixtures.yml', 'w') do |file|
+        file.write data
+      end
+    end
+
   end
 end
