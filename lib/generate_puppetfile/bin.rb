@@ -244,9 +244,9 @@ fixtures:
       module_directories.each do |module_directory|
         name = File.basename(module_directory)
         file = File.read("#{module_directory}/metadata.json")
-        project_page = (JSON.parse(file))["project_page"]
-        fixtures_data += "    #{name}: #{project_page}\n"
-        puts "Found a module '#{name}' with a project page of #{project_page}." if @options[:debug]
+        source = (JSON.parse(file))["source"]
+        fixtures_data += "    #{name}: #{source}\n"
+        puts "Found a module '#{name}' with a project page of #{source}." if @options[:debug]
       end unless module_directories == []
 
       fixtures_data
