@@ -4,14 +4,17 @@ require 'generate_puppetfile/optparser'
 require 'fileutils'
 require 'tempfile'
 require 'json'
+require 'mkmf'
 
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
+    Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
     @options = {}    # Options hash
     @workspace = nil # Working directory for module download and inspection
     Silence   = '>/dev/null 2>&1 '
+    Puppetfile_Header = '# Modules discovered by generate-puppetfile'
+    Extras_Note = '# Discovered elements from existing Puppetfile'
 
     # Public: Initialize a new GeneratePuppetfile::Bin
     #
@@ -35,6 +38,12 @@ module GeneratePuppetfile
       if @args[0].nil? && (! @options[:puppetfile])
         $stderr.puts "generate-puppetfile: No modules or existing Puppetfile specified."
         puts helpmsg
+        return 1
+      end
+
+      if (! verify_puppet_exists())
+        $stderr.puts "generate-puppetfile: Could not find a 'puppet' executable."
+        $stderr.puts "  Please make puppet available in your path before trying again."
         return 1
       end
 
@@ -148,20 +157,27 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       }
 
       File.foreach(puppetfile) do |line|
-        if Module_regex.match(line)
+        if Module_Regex.match(line)
           name = $1
           print "    #{name} looks like a forge module.\n" if @options[:debug]
           puppetfile_contents[:modules].push(name)
         else
           next if line =~ /^forge/
           next if line =~ /^\s+$/
-          next if line =~ /# Discovered elements from existing Puppetfile/
+          next if line =~ /#{Puppetfile_Header}/
+          next if line =~ /#{Extras_Note}/
 
           puppetfile_contents[:extras].push(line)
         end
       end
 
       puppetfile_contents
+    end
+
+    # Public: Verify that Puppet is available in the path
+    def verify_puppet_exists()
+      MakeMakefile::Logging.instance_variable_set(:@logfile, File::NULL)
+      find_executable0('puppet')
     end
 
     # Public: Download the list of modules and their dependencies to @workspace
@@ -173,6 +189,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
         command  = "puppet module install #{name} "
         command += @modulepath + Silence
 
+        puts "Calling '#{command}'" if @options[:debug]
         system(command)
       end
     end
@@ -202,12 +219,12 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       puppetfile_contents = <<-EOF
 forge 'http://forge.puppetlabs.com'
 
-# Modules discovered by generate-puppetfile
+#{Puppetfile_Header}
       EOF
 
       puppetfile_contents += generate_module_output()
 
-      puppetfile_contents += "# Discovered elements from existing Puppetfile\n" unless extras == []
+      puppetfile_contents += "#{Extras_Note}\n" unless extras == []
       extras.each do |line|
         puppetfile_contents += "#{line}"
       end unless extras == []
