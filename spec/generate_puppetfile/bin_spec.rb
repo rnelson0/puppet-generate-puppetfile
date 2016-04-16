@@ -32,6 +32,17 @@ describe GeneratePuppetfile::Bin do
 
     CommandRun.new(sane_args)
   end
+  
+  context 'when puppet is not available' do
+    let :args do
+      'rnelson0/certs'
+    end
+
+    its(:exitstatus) {
+      expect(ENV).to receive(:[]).with("PATH").and_return("/dne")
+      is_expected.to eq(1)
+    }
+  end
 
   context 'when running with one module on the CLI' do
     let :args do
@@ -39,14 +50,5 @@ describe GeneratePuppetfile::Bin do
     end
 
     its(:exitstatus) { is_expected.to eq(0) }
-  end
-
-  context 'when puppet is not available' do
-    let :args do
-      'rnelson0/certs'
-    end
-    before { ENV['PATH'] = '/dne' }
-
-    its(:exitstatus) { is_expected.to eq(1) }
   end
 end
