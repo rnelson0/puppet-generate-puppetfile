@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://github.com/rnelson0/puppet-generate-puppetfile'
   s.license     = 'MIT'
 
-  s.add_development_dependency 'rake', '~> 10'
+  s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec', '~> 3'
   s.add_development_dependency 'rspec-its', '~> 1'
   s.add_development_dependency 'json', '~> 1'

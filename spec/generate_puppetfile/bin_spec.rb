@@ -34,8 +34,19 @@ describe GeneratePuppetfile::Bin do
   end
 
   context 'when running with one module on the CLI' do
-    let(:args) { 'rnelson0/certs' }
+    let :args do
+      'rnelson0/certs'
+    end
 
     its(:exitstatus) { is_expected.to eq(0) }
+  end
+
+  context 'when puppet is not available' do
+    let :args do
+      'rnelson0/certs'
+    end
+    before { ENV['PATH'] = '/dne' }
+
+    its(:exitstatus) { is_expected.to eq(1) }
   end
 end
