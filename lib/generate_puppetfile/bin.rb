@@ -186,12 +186,23 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     def download_modules(module_list)
       puts "\nInstalling modules. This may take a few minutes.\n" unless @options[:silent]
       module_list.each do |name|
-        command  = "puppet module install #{name} "
-        command += @modulepath + Silence
-
-        puts "Calling '#{command}'" if @options[:debug]
-        system(command)
+        if !_download_module(name)
+          $stderr.puts "There was a problem with the module name '#{name}'."
+          $stderr.puts "  Check that module exists as you spelled it and/or your connectivity to the puppet forge."
+          exit 2
+        end
       end
+    end
+
+    # Private: Download an individual module
+    #
+    # _download_module
+    def _download_module(name)
+      command  = "puppet module install #{name} "
+      command += @modulepath + Silence
+
+      puts "Calling '#{command}'" if @options[:debug]
+      system(command)
     end
     
     # Public: generate the list of modules in Puppetfile format from the @workspace

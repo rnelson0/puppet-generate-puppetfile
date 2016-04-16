@@ -33,6 +33,14 @@ describe GeneratePuppetfile::Bin do
     CommandRun.new(sane_args)
   end
   
+  context 'when running with one module on the CLI' do
+    let :args do
+      'rnelson0/certs'
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
+  end
+
   context 'when puppet is not available' do
     let :args do
       'rnelson0/certs'
@@ -44,11 +52,11 @@ describe GeneratePuppetfile::Bin do
     }
   end
 
-  context 'when running with one module on the CLI' do
+  context 'when specifying a bad module name' do
     let :args do
-      'rnelson0/certs'
+      'rnelson0/12345'
     end
 
-    its(:exitstatus) { is_expected.to eq(0) }
+    its(:exitstatus) { is_expected.to eq(1) }
   end
 end
