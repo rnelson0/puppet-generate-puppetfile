@@ -13,7 +13,7 @@ module GeneratePuppetfile
       options[:modulename] = 'profile'
 
       opts = OptionParser.new do |opts|
-        opts.banner = "generate-puppetfile [OPTIONS] [<MODULE> ... <MODULE>]"
+        opts.banner = 'generate-puppetfile [OPTIONS] [<MODULE> ... <MODULE>]'
 
         opts.on('-p', '--puppetfile FILE', 'Name of existing Puppetfile to verify and update') do |file|
           unless File.readable?(file)
@@ -26,6 +26,10 @@ module GeneratePuppetfile
 
         opts.on('-c', '--create_puppetfile', 'Create a Puppetfile in the working directory. Warning: overwrites any existing file with the same name.') do
           options[:create_puppetfile] = true
+        end
+
+        opts.on('-d', '--debug', 'Enable debug logging') do
+          options[:debug] = true
         end
 
         opts.on('-f', '--fixtures', 'Create a .fixtures.yml file in the working directory. Somewhat naive.') do
@@ -41,16 +45,12 @@ module GeneratePuppetfile
           options[:create_puppetfile] = true
         end
 
-        opts.on('-d', '--debug', 'Enable debug logging') do
-          options[:debug] = true
-        end
-
         opts.on_tail('-v', '--version', 'Show version') do
           puts "generate-puppetfile v#{GeneratePuppetfile::VERSION}"
           exit
         end
       end
-     
+
       opts.parse!(args)
       options
     end

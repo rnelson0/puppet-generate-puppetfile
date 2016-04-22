@@ -1,10 +1,12 @@
 # encoding: utf-8
+require 'fileutils'
 require 'generate_puppetfile'
 require 'generate_puppetfile/optparser'
-require 'fileutils'
-require 'tempfile'
 require 'json'
 require 'mkmf'
+require 'rugged'
+require 'tempfile'
+require 'uri'
 
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
@@ -12,9 +14,9 @@ module GeneratePuppetfile
     Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
     @options = {}    # Options hash
     @workspace = nil # Working directory for module download and inspection
-    Silence   = '>/dev/null 2>&1 '
-    Puppetfile_Header = '# Modules discovered by generate-puppetfile'
-    Extras_Note = '# Discovered elements from existing Puppetfile'
+    Silence = '>/dev/null 2>&1 '.freeze
+    Puppetfile_Header = '# Modules discovered by generate-puppetfile'.freeze
+    Extras_Note = '# Discovered elements from existing Puppetfile'.freeze
 
     # Public: Initialize a new GeneratePuppetfile::Bin
     #
@@ -36,28 +38,31 @@ module GeneratePuppetfile
       helpmsg = "generate-puppetfile: try 'generate-puppetfile --help' for more information."
 
       if @args[0].nil? && (! @options[:puppetfile])
-        $stderr.puts "generate-puppetfile: No modules or existing Puppetfile specified."
+        $stderr.puts 'generate-puppetfile: No modules or existing Puppetfile specified.'
         puts helpmsg
         return 1
       end
 
-      if (! verify_puppet_exists())
+      unless verify_puppet_exists
         $stderr.puts "generate-puppetfile: Could not find a 'puppet' executable."
-        $stderr.puts "  Please make puppet available in your path before trying again."
+        $stderr.puts '  Please make puppet available in your path before trying again.'
         return 1
       end
 
-      forge_module_list = Array.new
+      forge_module_list = []
+      git_module_list = []
 
       if @args
         puts "\nProcessing modules from the command line...\n\n" if @options[:debug]
-        cli_modules = Array.new
+        cli_forge_modules = []
+        cli_git_modules = []
         @args.each do |modulename|
-          validate(modulename) && (cli_modules.push(modulename))
+          validate_forge_module(modulename) && cli_forge_modules.push(modulename) && continue
+          validate_git_module(modulename) && cli_git_modules.push(modulename)
         end
       end
 
-      puppetfile_contents = Hash.new
+      puppetfile_contents = {}
       extras = []
       if @options[:puppetfile]
         puts "\nProcessing the puppetfile '#{@options[:puppetfile]}'...\n\n" if @options[:debug]
@@ -68,36 +73,30 @@ module GeneratePuppetfile
       forge_module_list.push(*cli_modules) if @args
       forge_module_list.push(*puppetfile_contents[:modules]) if puppetfile_contents[:modules]
       list_forge_modules(forge_module_list) if puppetfile_contents && @options[:debug]
+      list_git_modules(git_module_list) if puppetfile_contents && @options[:debug]
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
-      unless forge_module_list != [] || puppetfile_contents[:extras] != []
-        $stderr.puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n"
-        return 1
-      end
+      abort("\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n") unless forge_module_list != [] || puppetfile_contents[:extras] != []
 
-      create_workspace()
+      create_workspace
       @modulepath = "--modulepath #{@workspace} "
 
-      download_modules(forge_module_list)
+      download_forge_modules(forge_module_list)
+      download_git_modules(git_module_list)
       puppetfile_contents = generate_puppetfile_contents(extras)
 
+      create_puppetfile(puppetfile_contents) if @options[:create_puppetfile]
 
-      if @options[:create_puppetfile]
-        create_puppetfile(puppetfile_contents)
-      end
-
-      unless @options[:silent]
-        display_puppetfile(puppetfile_contents)
-      end
+      display_puppetfile(puppetfile_contents) unless @options[:silent]
 
       if @options[:create_fixtures]
-        fixtures_data = generate_fixtures_data()
+        fixtures_data = generate_fixtures_data
         write_fixtures_data(fixtures_data)
       end
 
-      cleanup_workspace()
+      cleanup_workspace
 
-      return 0
+      0
     end
 
     # Public: Display the generated Puppetfile to STDOUT with delimiters
@@ -114,51 +113,69 @@ Your Puppetfile has been generated. Copy and paste between the markers:
 
     # Public: Create a Puppetfile on disk
     # The Puppetfile will be called 'Puppetfile' in the current working directory
-    def create_puppetfile (puppetfile_contents)
+    def create_puppetfile(puppetfile_contents)
       File.open('Puppetfile', 'w') do |file|
         file.write puppetfile_contents
       end
     end
 
-    # Public: Validates that a provided module name is valid.
-    def validate (modulename)
+    # Public: Validates that a provided forge module name is valid.
+    def validate_forge_module(modulename)
       success = (modulename =~ /[a-z0-9_]\/[a-z0-9_]/i)
       $stderr.puts "'#{modulename}' is not a valid module name. Skipping." unless success
       success
     end
 
+    # Public: Validates that a provided git module name is valid.
+    def validate_git_module(modulename)
+      success = URI(modulename) rescue URI::Error
+      $stderr.puts "'#{modulename}' is not a valid module URI. Skipping." unless success
+      success
+    end
+
     # Public: Display the list of Forge modules collected.
-    def list_forge_modules (module_list)
+    def list_forge_modules(module_list)
       unless @options[:silent]
-        puts "\nListing discovered modules from CLI and/or Puppetfile:\n\n"
+        puts "\nListing discovered forge modules from CLI and/or Puppetfile:\n\n"
         module_list.each do |name|
           puts "    #{name}"
         end
-        puts ""
+        puts ''
+      end
+    end
+
+    # Public: Display the list of git modules collected.
+    def list_git_modules(module_list)
+      unless @options[:silent]
+        puts "\nListing discovered git modules from CLI and/or Puppetfile:\n\n"
+        module_list.each do |name|
+          puts "    #{name}"
+        end
+        puts ''
       end
     end
 
     # Public: Display the list of extra statements found in the Puppetfile.
-    def list_extras (extras)
+    def list_extras(extras)
       unless @options[:silent] || (extras == [])
         puts "\nExtras found in the existing Puppetfile:\n\n"
         extras.each do |line|
           puts "    #{line}"
         end
-        puts ""
+        puts ''
       end
     end
 
     # Public: Read and parse the contents of an existing Puppetfile
-    def read_puppetfile (puppetfile)
+    def read_puppetfile(puppetfile)
       puppetfile_contents = {
-        :modules => Array.new,
-        :extras  => Array.new,
+        modules: [],
+        extras: []
       }
 
       File.foreach(puppetfile) do |line|
         if Module_Regex.match(line)
-          name = $1
+          name = Regexp.last_match(1)
           print "    #{name} looks like a forge module.\n" if @options[:debug]
           puppetfile_contents[:modules].push(name)
         else
@@ -175,43 +192,62 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     end
 
     # Public: Verify that Puppet is available in the path
-    def verify_puppet_exists()
+    def verify_puppet_exists
       MakeMakefile::Logging.instance_variable_set(:@logfile, File::NULL)
       find_executable0('puppet')
     end
 
-    # Public: Download the list of modules and their dependencies to @workspace
+    # Public: Download the list of forge modules and their dependencies to @workspace
     #
-    # module_list is an array of forge module names to be downloaded
-    def download_modules(module_list)
-      puts "\nInstalling modules. This may take a few minutes.\n" unless @options[:silent]
-      module_list.each do |name|
-        if !_download_module(name)
-          $stderr.puts "There was a problem with the module name '#{name}'."
-          $stderr.puts "  Check that module exists as you spelled it and/or your connectivity to the puppet forge."
-          exit 2
-        end
+    # forge_module_list is an array of forge module names to be downloaded
+    def download_forge_modules(forge_module_list)
+      puts "\nInstalling forge modules. This may take a few minutes.\n" unless @options[:silent]
+      forge_module_list.each do |name|
+        next if _download_forge_module(name)
+        $stderr.puts "There was a problem with the module name '#{name}'."
+        $stderr.puts '  Check that module exists as you spelled it and/or your connectivity to the puppet forge.'
+        exit 2
       end
     end
 
-    # Private: Download an individual module
+    # Private: Download an individual forge module
     #
-    # _download_module
-    def _download_module(name)
+    # _download_forge_module
+    def _download_forge_module(name)
       command  = "puppet module install #{name} "
       command += @modulepath + Silence
 
       puts "Calling '#{command}'" if @options[:debug]
       system(command)
     end
-    
+
+    # Public: Download the list of git modules to @workspace
+    #
+    # git_module_list is an array of git URI to be downloaded
+    def download_forge_modules(forge_module_list)
+      puts "\nInstalling git modules. This may take a few minutes.\n" unless @options[:silent]
+      git_module_list.each do |name|
+        next if _download_git_module(name)
+        $stderr.puts "There was a problem with the module named '#{name}'."
+        $stderr.puts '  Check that the module exists at the url listed and/or your connectivity to the git repo.'
+        exit 2
+      end
+    end
+
+    # Private: Download an individual git module
+    #
+    # _download_git_module
+    def _download_git_module(git_url)
+      Rugged::Repository.clone_at(git_url, git_url.path.partition(%r{[\w-]+\/[\w-]+})[1].split('-')[-1]) rescue Rugged::Error
+    end
+
     # Public: generate the list of modules in Puppetfile format from the @workspace
-    def generate_module_output ()
+    def generate_module_output
       module_output = `puppet module list #{@modulepath} 2>/dev/null`
 
       module_output.gsub!(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]/, '') # Strips ANSI color codes
       module_output.gsub!(/^\/.*$/, '')
-      module_output.gsub!(/-/,      '/')
+      module_output.tr!('-', '/')
       module_output.gsub!(/├── /,   "mod '")
       module_output.gsub!(/└── /,   "mod '")
       module_output.gsub!(/ \(v/,   "', '")
@@ -225,36 +261,35 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     # and any extras found in an existing Puppetfile.
     #
     # extras is an array of strings
-    def generate_puppetfile_contents (extras)
-
+    def generate_puppetfile_contents(extras)
       puppetfile_contents = <<-EOF
 forge 'http://forge.puppetlabs.com'
 
 #{Puppetfile_Header}
       EOF
 
-      puppetfile_contents += generate_module_output()
+      puppetfile_contents += generate_module_output
 
       puppetfile_contents += "#{Extras_Note}\n" unless extras == []
       extras.each do |line|
-        puppetfile_contents += "#{line}"
+        puppetfile_contents += line.to_s
       end unless extras == []
 
       puppetfile_contents
     end
 
     # Public: Create a temporary workspace for module manipulation
-    def create_workspace()
-      @workspace = (Dir.mktmpdir).chomp
+    def create_workspace
+      @workspace = Dir.mktmpdir.chomp
     end
 
     # Public: Remove the workspace (with prejudice)
-    def cleanup_workspace ()
+    def cleanup_workspace
       FileUtils.rm_rf(@workspace)
     end
 
     # Public: Generate a simple fixtures file.
-    def generate_fixtures_data ()
+    def generate_fixtures_data
       puts "\nGenerating .fixtures.yml using module name #{@options[:modulename]}" unless @options[:silent]
 
       # Header for fixtures file creates a symlink for the current module"
@@ -264,15 +299,12 @@ fixtures:
     #{@options[:modulename]}: "\#{source_dir}"
       EOF
 
-
       module_directories = Dir.glob("#{@workspace}/*")
-      if (module_directories != [])
-        fixtures_data += "  repositories:\n"
-      end
+      fixtures_data += "  repositories:\n" unless module_directories.empty?
       module_directories.each do |module_directory|
         name = File.basename(module_directory)
         file = File.read("#{module_directory}/metadata.json")
-        source = (JSON.parse(file))["source"]
+        source = JSON.parse(file)['source']
         fixtures_data += "    #{name}: #{source}\n"
         puts "Found a module '#{name}' with a project page of #{source}." if @options[:debug]
       end unless module_directories == []
@@ -280,11 +312,10 @@ fixtures:
       fixtures_data
     end
 
-    def write_fixtures_data (data)
+    def write_fixtures_data(data)
       File.open('.fixtures.yml', 'w') do |file|
         file.write data
       end
     end
-
   end
 end
