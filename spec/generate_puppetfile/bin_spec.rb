@@ -24,15 +24,15 @@ end
 
 describe GeneratePuppetfile::Bin do
   subject do
-    if args.is_a? Array
-      sane_args = args
-    else
-      sane_args = [args]
-    end
+    sane_args = if args.is_a? Array
+                  args
+                else
+                  [args]
+                end
 
     CommandRun.new(sane_args)
   end
-  
+
   context 'when running with one module on the CLI' do
     let :args do
       'rnelson0/certs'
@@ -46,10 +46,10 @@ describe GeneratePuppetfile::Bin do
       'rnelson0/certs'
     end
 
-    its(:exitstatus) {
-      expect(ENV).to receive(:[]).with("PATH").and_return("/dne")
+    its(:exitstatus) do
+      expect(ENV).to receive(:[]).with('PATH').and_return('/dne')
       is_expected.to eq(1)
-    }
+    end
   end
 
   context 'when specifying a bad module name' do
