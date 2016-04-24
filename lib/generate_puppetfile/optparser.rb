@@ -13,7 +13,7 @@ module GeneratePuppetfile
       options[:modulename] = 'profile'
 
       opts = OptionParser.new do |opts|
-        opts.banner = "generate-puppetfile [OPTIONS] [<MODULE> ... <MODULE>]"
+        opts.banner = 'generate-puppetfile [OPTIONS] [<MODULE> ... <MODULE>]'
 
         opts.on('-p', '--puppetfile FILE', 'Name of existing Puppetfile to verify and update') do |file|
           unless File.readable?(file)
@@ -50,7 +50,7 @@ module GeneratePuppetfile
           exit
         end
       end
-     
+
       opts.parse!(args)
       options
     end
