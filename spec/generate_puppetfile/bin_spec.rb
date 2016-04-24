@@ -57,6 +57,6 @@ describe GeneratePuppetfile::Bin do
       'rnelson0/12345'
     end
 
-    its(:exitstatus) { is_expected.to eq(1) }
+    its(:exitstatus) { is_expected.to eq(2) }
   end
 end
