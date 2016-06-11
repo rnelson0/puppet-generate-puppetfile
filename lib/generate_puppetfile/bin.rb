@@ -78,7 +78,7 @@ module GeneratePuppetfile
       create_workspace
       @modulepath = "--modulepath #{@workspace} "
 
-      download_modules(forge_module_list)
+      return 2 if download_modules(forge_module_list) == 2
       puppetfile_contents = generate_puppetfile_contents(extras)
 
       create_puppetfile(puppetfile_contents) if @options[:create_puppetfile]
@@ -184,7 +184,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
         next if _download_module(name)
         $stderr.puts "There was a problem with the module name '#{name}'."
         $stderr.puts '  Check that module exists as you spelled it and/or your connectivity to the puppet forge.'
-        exit 2
+        return 2
       end
     end
 
