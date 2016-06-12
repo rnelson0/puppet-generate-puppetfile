@@ -1,0 +1,13 @@
+---
+sudo: false
+language: ruby
+branches:
+  only:
+    - production
+bundler_args: --without development system_tests
+before_install: rm Gemfile.lock || true
+script: bundle exec rake test
+rvm:
+  - 2.0.0
+notifications:
+  email: false
