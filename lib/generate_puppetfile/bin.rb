@@ -12,7 +12,7 @@ module GeneratePuppetfile
     Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
     @options = {}    # Options hash
     @workspace = nil # Working directory for module download and inspection
-    Silence = '>/dev/null 2>&1 '.freeze
+    Silence = ('>' + File::NULL.to_str + ' 2>&1 ').freeze
     Puppetfile_Header = '# Modules discovered by generate-puppetfile'.freeze
     Extras_Note = '# Discovered elements from existing Puppetfile'.freeze
 
@@ -201,18 +201,23 @@ Your Puppetfile has been generated. Copy and paste between the markers:
 
     # Public: generate the list of modules in Puppetfile format from the @workspace
     def generate_module_output
-      module_output = `puppet module list #{@modulepath} 2>/dev/null`
+      command = "puppet module list #{@modulepath} 2>#{File::NULL}"
+      puts "Calling '#{command}'" if @options[:debug]
+      module_output = `#{command}`
 
       module_output.gsub!(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]/, '') # Strips ANSI color codes
-      module_output.gsub!(/^\/.*$/, '')
-      module_output.tr!('-', '/')
-      module_output.gsub!(/├── /,   "mod '")
-      module_output.gsub!(/└── /,   "mod '")
-      module_output.gsub!(/ \(v/,   "', '")
-      module_output.gsub!(/\)$/,    "'")
-      module_output.gsub!(/^$\n/,   '')
+      matching = ''
+      module_output.split("\n").each do |line|
+        next unless line =~ / \(v/
+      matching += line
+      end
+      matching.tr!('-', '/')
+      matching.gsub!(/^\S* /,   "mod '")
+      matching.gsub!(/ \(v/,   "', '")
+      matching.gsub!(/\)$/,    "'")
+      matching.gsub!(/^$\n/,   '')
 
-      module_output
+      matching
     end
 
     # Public: Generate a new Puppetfile's contents based on a list of modules
