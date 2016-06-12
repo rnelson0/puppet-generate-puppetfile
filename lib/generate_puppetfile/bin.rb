@@ -206,15 +206,18 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       module_output = `#{command}`
 
       module_output.gsub!(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]/, '') # Strips ANSI color codes
-      module_output.gsub!(/^\/.*$/, '')
-      module_output.tr!('-', '/')
-      module_output.gsub!(/├── /,   "mod '")
-      module_output.gsub!(/└── /,   "mod '")
-      module_output.gsub!(/ \(v/,   "', '")
-      module_output.gsub!(/\)$/,    "'")
-      module_output.gsub!(/^$\n/,   '')
+      matching = ''
+      module_output.split("\n").each do |line|
+        next unless line =~ / \(v/
+      matching += line
+      end
+      matching.tr!('-', '/')
+      matching.gsub!(/^\S* /,   "mod '")
+      matching.gsub!(/ \(v/,   "', '")
+      matching.gsub!(/\)$/,    "'")
+      matching.gsub!(/^$\n/,   '')
 
-      module_output
+      matching
     end
 
     # Public: Generate a new Puppetfile's contents based on a list of modules
