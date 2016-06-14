@@ -10,8 +10,9 @@ module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
     Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
-    @options = {}    # Options hash
-    @workspace = nil # Working directory for module download and inspection
+    @options = {}     # Options hash
+    @workspace = nil  # Working directory for module download and inspection
+    @module_data = {} # key: modulename, value: version number
     Silence = ('>' + File::NULL.to_str + ' 2>&1 ').freeze
     Puppetfile_Header = '# Modules discovered by generate-puppetfile'.freeze
     Extras_Note = '# Discovered elements from existing Puppetfile'.freeze
@@ -79,6 +80,7 @@ module GeneratePuppetfile
       @modulepath = "--modulepath #{@workspace} "
 
       return 2 if download_modules(forge_module_list) == 2
+      @module_data = generate_module_data
       puppetfile_contents = generate_puppetfile_contents(extras)
 
       create_puppetfile(puppetfile_contents) if @options[:create_puppetfile]
@@ -199,25 +201,32 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       system(command)
     end
 
-    # Public: generate the list of modules in Puppetfile format from the @workspace
-    def generate_module_output
+    # Public: generate the module data the @workspace
+    def generate_module_data
       command = "puppet module list #{@modulepath} 2>#{File::NULL}"
       puts "Calling '#{command}'" if @options[:debug]
       module_output = `#{command}`
 
       module_output.gsub!(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]/, '') # Strips ANSI color codes
-      matching = ''
-      module_output.split("\n").each do |line|
+      modules = {}
+      module_output.each_line do |line|
         next unless line =~ / \(v/
-      matching += line
+        line.tr!('-', '/')
+        line.gsub!(/^\S* /, '')
+        line += line
+        name, version = line.match(/(\S+) \(v(.+)\)/).captures
+        modules[name] = version
       end
-      matching.tr!('-', '/')
-      matching.gsub!(/^\S* /,   "mod '")
-      matching.gsub!(/ \(v/,   "', '")
-      matching.gsub!(/\)$/,    "'")
-      matching.gsub!(/^$\n/,   '')
+      modules
+    end
 
-      matching
+    # Public: generate the list of modules in Puppetfile format from the @workspace
+    def generate_forge_module_output
+      module_output = ''
+      @module_data.keys.each do |modulename|
+        module_output += "mod #{modulename}, '#{@module_data[modulename]}'\n"
+      end
+      module_output
     end
 
     # Public: Generate a new Puppetfile's contents based on a list of modules
@@ -231,7 +240,7 @@ forge 'http://forge.puppetlabs.com'
 #{Puppetfile_Header}
       EOF
 
-      puppetfile_contents += generate_module_output
+      puppetfile_contents += generate_forge_module_output
 
       puppetfile_contents += "#{Extras_Note}\n" unless extras == []
       extras.each do |line|
@@ -262,15 +271,16 @@ fixtures:
     #{@options[:modulename]}: "\#{source_dir}"
       EOF
 
-      module_directories = Dir.glob("#{@workspace}/*")
-      fixtures_data += "  repositories:\n" if module_directories != []
-      module_directories.each do |module_directory|
-        name = File.basename(module_directory)
-        file = File.read("#{module_directory}/metadata.json")
-        source = JSON.parse(file)['source']
-        fixtures_data += "    #{name}: #{source}\n"
-        puts "Found a module '#{name}' with a project page of #{source}." if @options[:debug]
-      end unless module_directories == []
+      fixtures_data += "  forge_modules:\n" if @module_data != {}
+      @module_data.keys.each do |modulename|
+        shortname = modulename.split('/')[1]
+        version = @module_data[modulename]
+        fixtures_data += <<-EOF
+    #{shortname}:
+      repo: "#{modulename}"
+      ref: "#{version}"
+        EOF
+      end
 
       fixtures_data
     end
