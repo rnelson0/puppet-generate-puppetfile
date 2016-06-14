@@ -5,6 +5,7 @@ require 'fileutils'
 require 'tempfile'
 require 'json'
 require 'mkmf'
+require 'colorize'
 
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
@@ -37,14 +38,14 @@ module GeneratePuppetfile
       helpmsg = "generate-puppetfile: try 'generate-puppetfile --help' for more information."
 
       if @args[0].nil? && (! @options[:puppetfile])
-        $stderr.puts 'generate-puppetfile: No modules or existing Puppetfile specified.'
+        $stderr.puts 'generate-puppetfile: No modules or existing Puppetfile specified.'.red
         puts helpmsg
         return 1
       end
 
       unless verify_puppet_exists
-        $stderr.puts "generate-puppetfile: Could not find a 'puppet' executable."
-        $stderr.puts '  Please make puppet available in your path before trying again.'
+        $stderr.puts "generate-puppetfile: Could not find a 'puppet' executable.".red
+        $stderr.puts '  Please make puppet available in your path before trying again.'.red
         return 1
       end
 
@@ -72,7 +73,7 @@ module GeneratePuppetfile
       list_extras(puppetfile_contents[:extras]) if puppetfile_contents[:extras] && @options[:debug]
 
       unless forge_module_list != [] || puppetfile_contents[:extras] != []
-        $stderr.puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n"
+        $stderr.puts "\nNo valid modules or existing Puppetfile content was found. Exiting.\n\n".red
         return 1
       end
 
@@ -120,7 +121,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     # Public: Validates that a provided module name is valid.
     def validate(modulename)
       success = (modulename =~ /[a-z0-9_]\/[a-z0-9_]/i)
-      $stderr.puts "'#{modulename}' is not a valid module name. Skipping." unless success
+      $stderr.puts "'#{modulename}' is not a valid module name. Skipping.".red unless success
       success
     end
 
@@ -181,11 +182,11 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     #
     # module_list is an array of forge module names to be downloaded
     def download_modules(module_list)
-      puts "\nInstalling modules. This may take a few minutes.\n" unless @options[:silent]
+      puts "\nInstalling modules. This may take a few minutes.\n\n" unless @options[:silent]
       module_list.each do |name|
         next if _download_module(name)
-        $stderr.puts "There was a problem with the module name '#{name}'."
-        $stderr.puts '  Check that module exists as you spelled it and/or your connectivity to the puppet forge.'
+        $stderr.puts "There was a problem with the module name '#{name}'.".red
+        $stderr.puts '  Check that module exists as you spelled it and/or your connectivity to the puppet forge.'.red
         return 2
       end
     end
@@ -216,6 +217,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
         line += line
         name, version = line.match(/(\S+) \(v(.+)\)/).captures
         modules[name] = version
+        $stderr.puts "Module #{name} has a version of #{version}, it may be deprecated. For more information, visit https://forge.puppet.com/#{name}".blue if version =~ /999/ and ! @options[:silent]
       end
       modules
     end
