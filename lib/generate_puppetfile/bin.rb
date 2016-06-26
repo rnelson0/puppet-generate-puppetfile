@@ -226,7 +226,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     def generate_forge_module_output
       module_output = ''
       @module_data.keys.each do |modulename|
-        module_output += "mod #{modulename}, '#{@module_data[modulename]}'\n"
+        module_output += "mod '#{modulename}', '#{@module_data[modulename]}'\n"
       end
       module_output
     end

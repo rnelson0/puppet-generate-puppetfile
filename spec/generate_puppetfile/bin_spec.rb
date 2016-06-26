@@ -39,6 +39,10 @@ describe GeneratePuppetfile::Bin do
     end
 
     its(:exitstatus) { is_expected.to eq(0) }
+
+    it 'should include the module name in single quotes' do
+      expect(subject.stdout).to include "mod 'rnelson0/certs'"
+    end
   end
 
   context 'when puppet is not available' do
