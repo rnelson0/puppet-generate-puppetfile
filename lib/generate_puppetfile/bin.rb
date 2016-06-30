@@ -11,9 +11,10 @@ module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
     Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
-    @options = {}     # Options hash
-    @workspace = nil  # Working directory for module download and inspection
-    @module_data = {} # key: modulename, value: version number
+    @options = {}         # Options hash
+    @workspace = nil      # Working directory for module download and inspection
+    @module_data = {}     # key: modulename, value: version number
+    @download_errors = '' # A list of errors encountered while downloading modules. Should remain empty.
     Silence = ('>' + File::NULL.to_str + ' 2>&1 ').freeze
     Puppetfile_Header = '# Modules discovered by generate-puppetfile'.freeze
     Extras_Note = '# Discovered elements from existing Puppetfile'.freeze
@@ -84,16 +85,21 @@ module GeneratePuppetfile
       @module_data = generate_module_data
       puppetfile_contents = generate_puppetfile_contents(extras)
 
-      create_puppetfile(puppetfile_contents) if @options[:create_puppetfile]
+      if @download_errors == ''
+        create_puppetfile(puppetfile_contents) if @options[:create_puppetfile]
+        display_puppetfile(puppetfile_contents) unless @options[:silent]
 
-      display_puppetfile(puppetfile_contents) unless @options[:silent]
+        if @options[:create_fixtures]
+          fixtures_data = generate_fixtures_data
+          write_fixtures_data(fixtures_data)
+        end
 
-      if @options[:create_fixtures]
-        fixtures_data = generate_fixtures_data
-        write_fixtures_data(fixtures_data)
+        cleanup_workspace
+      else
+        $stderr.puts @download_errors
+        display_puppetfile(puppetfile_contents) unless @options[:silent]
+        return 2
       end
-
-      cleanup_workspace
 
       0
     end
@@ -183,11 +189,16 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     # module_list is an array of forge module names to be downloaded
     def download_modules(module_list)
       puts "\nInstalling modules. This may take a few minutes.\n\n" unless @options[:silent]
+
+      @download_errors = ''
       module_list.each do |name|
         next if _download_module(name)
-        $stderr.puts "There was a problem with the module name '#{name}'.".red
-        $stderr.puts '  Check that module exists as you spelled it and/or your connectivity to the puppet forge.'.red
-        return 2
+        @download_errors << "There was a problem with the module name '#{name}'.".red + "\n"
+      end
+
+      if @download_errors != ''
+        @download_errors << '  Check that modules exist as under the listed name, and/or your connectivity to the puppet forge.'.red + "\n\n"
+        @download_errors << 'Here is the PARTIAL Puppetfile that would have been generated.'.red + "\n\n\n"
       end
     end
 
