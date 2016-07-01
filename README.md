@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/rnelson0/puppet-generate-puppetfile.png?branch=master)](https://travis-ci.org/rnelson0/puppet-generate-puppetfile)
 [![Gem Version](https://badge.fury.io/rb/generate-puppetfile.svg)](https://badge.fury.io/rb/generate-puppetfile)
 
 Tired of searching for dependencies on the forge and hoping you got everything? Have an existing Puppetfile that's getting long in the tooth? Use generate-puppetfile to generate a list of modules and their dependencies, at the latest version, in Puppetfile format for use with r10k or librarian-puppet.
