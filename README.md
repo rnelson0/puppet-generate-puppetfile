@@ -24,16 +24,16 @@ Your Puppetfile has been generated. Copy and paste between the markers:
 forge 'http://forge.puppetlabs.com'
 
 # Modules discovered by generate-puppetfile
-
 mod 'echocat/nfs', '1.7.1'
 mod 'herculesteam/augeasproviders_core', '2.1.2'
 mod 'herculesteam/augeasproviders_shellvar', '2.2.0'
 mod 'puppetlabs/concat', '1.2.4'
 mod 'puppetlabs/stdlib', '4.9.0'
 mod 'rnelson0/certs', '0.6.2'
-
 # Discovered elements from existing Puppetfile
-
+# Modules from github
+mod 'lab_config',
+  :git => 'git@github.com:puppetinabox/lab_config.git'
 =======================================================================
 
 ```
@@ -51,7 +51,6 @@ Your Puppetfile has been generated. Copy and paste between the markers:
 forge 'http://forge.puppetlabs.com'
 
 # Modules discovered by generate-puppetfile
-
 mod 'ajjahn/dhcp', '0.2.0'
 mod 'croddy/make', '0.0.5'
 mod 'garethr/erlang', '0.3.0'
@@ -94,15 +93,18 @@ mod 'thias/bind', '0.5.1'
 mod 'yguenane/augeas', '0.1.1'
 mod 'yguenane/ygrpms', '0.1.0'
 mod 'zack/r10k', '3.1.1'
-
 # Discovered elements from existing Puppetfile
 # Modules from the Puppet Forge
 # Modules from Github
 mod 'lab_config',
   :git => 'git@github.com:puppetinabox/lab_config.git'
-
 =======================================================================
 ```
+
+## Changes
+Documentation of important pre-1.0.0 changes
+
+* *0.10.0*: `--fixtures` has been replaced with `--create-fixtures`. `-f` is still an alias for this argument.
 
 ## Limitations
 

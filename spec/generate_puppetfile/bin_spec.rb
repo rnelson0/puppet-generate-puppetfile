@@ -29,8 +29,16 @@ describe GeneratePuppetfile::Bin do
                 else
                   [args]
                 end
-
     CommandRun.new(sane_args)
+  end
+
+  after(:each) do
+    [
+      'Puppetfile',
+      '.fixtures.yml',
+    ].each do |tempfile|
+      #File.delete(tempfile) if File.exists?(tempfile)
+    end
   end
 
   context 'when running with one module on the CLI' do
@@ -62,5 +70,21 @@ describe GeneratePuppetfile::Bin do
     end
 
     its(:exitstatus) { is_expected.to eq(2) }
+  end
+
+  context 'when creating fixtures' do
+    let :args do [
+        'rnelson0/certs',
+        '--create-fixtures',
+      ]
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
+    it 'should say that fixtures have been created' do
+      expect(subject.stdout).to include "Generating .fixtures.yml"
+    end
+    it 'should create .fixtures.yml' do
+      File.exists? './.fixtures.yml'
+    end
   end
 end

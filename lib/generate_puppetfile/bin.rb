@@ -277,12 +277,44 @@ forge 'http://forge.puppetlabs.com'
     def generate_fixtures_data
       puts "\nGenerating .fixtures.yml using module name #{@options[:modulename]}" unless @options[:silent]
 
-      # Header for fixtures file creates a symlink for the current module"
-      fixtures_data = <<-EOF
-fixtures:
-  symlinks:
-    #{@options[:modulename]}: "\#{source_dir}"
-      EOF
+      # Determine if there are symlinks, either for the default modulename, or for anything in the modulepath
+      symlinks = []
+      modulepath = ''
+      if (File.exists?('environment.conf') and environment_conf = File.read('environment.conf'))
+        puts "\nGenerating .fixtures.yml for a controlrepo." unless @options[:silent]
+
+        environment_conf.split("\n").each do |line|
+          modulepath = (line.split('='))[1].gsub(/\s+/,'') if line =~ /^modulepath/
+        end
+
+        paths = modulepath.split(':').delete_if { |path| path =~ /^\$/ }
+        paths.each do |path|
+          Dir["#{path}/*"].each do |module_location|
+            module_name = File.basename(module_location)
+            module_path = module_location
+            symlinks << {
+              :name => module_name,
+              :path => '"#{source_dir}/' + module_path + '"',
+            }
+          end
+        end
+      else
+        puts "\nGenerating .fixtures.yml using module name #{@options[:modulename]}." unless @options[:silent]
+
+        symlinks << { 
+          :name => @options[:modulename],
+          :path => '"#{source_dir}"',
+        }
+      end
+
+      # Header for fixtures file creates symlinks for the controlrepo's modulepath, or for the current module"
+      fixtures_data = "fixtures:\n"
+      if symlinks
+        fixtures_data += "  symlinks:\n"
+        symlinks.each do |symlink|
+          fixtures_data += "    #{symlink[:name]}: #{symlink[:path]}\n"
+        end
+      end
 
       fixtures_data += "  forge_modules:\n" if @module_data != {}
       @module_data.keys.each do |modulename|
