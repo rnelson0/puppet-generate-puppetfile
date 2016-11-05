@@ -85,14 +85,15 @@ module GeneratePuppetfile
       @module_data = generate_module_data
       puppetfile_contents = generate_puppetfile_contents(extras)
 
+      if @options[:create_fixtures]
+        fixtures_data = generate_fixtures_data
+        write_fixtures_data(fixtures_data)
+      end
+
       if @download_errors == ''
         create_puppetfile(puppetfile_contents) if @options[:create_puppetfile]
         display_puppetfile(puppetfile_contents) unless @options[:silent]
 
-        if @options[:create_fixtures]
-          fixtures_data = generate_fixtures_data
-          write_fixtures_data(fixtures_data)
-        end
 
         cleanup_workspace
       else
