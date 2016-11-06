@@ -28,11 +28,11 @@ module GeneratePuppetfile
           options[:create_puppetfile] = true
         end
 
-        opts.on('-f', '--fixtures', 'Create a .fixtures.yml file in the working directory. Somewhat naive.') do
+        opts.on('-f', '--create-fixtures', 'Create a .fixtures.yml file in the working directory. This works in a module directory or at the top if your controlrepo..') do
           options[:create_fixtures] = true
         end
 
-        opts.on('-m', '--modulename NAME', "Name of the module the fixtures file will be used with. Optional. Defaults to 'profile'.") do |name|
+        opts.on('-m', '--modulename NAME', "Name of the module the fixtures file will be used with. Optional, for use with --create-fixtures when used in a module directory. Defaults to 'profile'. ") do |name|
           options[:modulename] = name
         end
 
