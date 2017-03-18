@@ -58,6 +58,10 @@ module GeneratePuppetfile
         @args.each do |modulename|
           validate(modulename) && cli_modules.push(modulename)
         end
+        if cli_modules == [] && ! @options[:puppetfile]
+          $stderr.puts "No valid modules were found to process.".red
+          return 1
+        end
       end
 
       puppetfile_contents = {}
@@ -126,7 +130,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
 
     # Public: Validates that a provided module name is valid.
     def validate(modulename)
-      success = (modulename =~ /[a-z0-9_]\/[a-z0-9_]/i)
+      success = (modulename =~ /[a-z0-9_][\/-][a-z0-9_]/i)
       $stderr.puts "'#{modulename}' is not a valid module name. Skipping.".red unless success
       success
     end
