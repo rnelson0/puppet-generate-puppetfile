@@ -41,6 +41,18 @@ describe GeneratePuppetfile::Bin do
     end
   end
 
+  context 'with hyphens in module name' do
+    let :args do
+      'rnelson0-certs'
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
+
+    it 'should include the module name in single quotes' do
+      expect(subject.stdout).to include "mod 'rnelson0/certs'"
+    end
+  end
+
   context 'when running with one module on the CLI' do
     let :args do
       'rnelson0/certs'
@@ -64,7 +76,28 @@ describe GeneratePuppetfile::Bin do
     end
   end
 
-  context 'when specifying a bad module name' do
+  context 'when specifying an invalid module name' do
+    let :args do
+      'certs'
+    end
+
+    its(:exitstatus) { is_expected.to eq(1) }
+  end
+
+  context 'when specifying an invalid module name and a Puppetfile' do
+    let :args do
+      [
+        'certs',
+        '-p',
+        'spec/Puppetfile',
+      ]
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
+  end
+
+
+  context 'when specifying a non-existing module name' do
     let :args do
       'rnelson0/12345'
     end
@@ -73,7 +106,8 @@ describe GeneratePuppetfile::Bin do
   end
 
   context 'when creating fixtures' do
-    let :args do [
+    let :args do
+      [
         'rnelson0/certs',
         '--create-fixtures',
       ]
