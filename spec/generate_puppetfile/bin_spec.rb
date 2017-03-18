@@ -84,6 +84,35 @@ describe GeneratePuppetfile::Bin do
     its(:exitstatus) { is_expected.to eq(1) }
   end
 
+  context 'when specifying a Puppetfile' do
+    let :args do
+      [
+        '-p',
+        'spec/Puppetfile',
+      ]
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
+    it 'should include comments in the result' do
+      expect(subject.stdout).to include "# Comments"
+    end
+  end
+
+  context 'when specifying a Puppetfile and --ignore-comments' do
+    let :args do
+      [
+        '-p',
+        'spec/Puppetfile',
+        '--ignore-comments',
+      ]
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
+    it 'should not include comments in the result' do
+      expect(subject.stdout).not_to include "# Comments"
+    end
+  end
+
   context 'when specifying an invalid module name and a Puppetfile' do
     let :args do
       [
@@ -95,7 +124,6 @@ describe GeneratePuppetfile::Bin do
 
     its(:exitstatus) { is_expected.to eq(0) }
   end
-
 
   context 'when specifying a non-existing module name' do
     let :args do

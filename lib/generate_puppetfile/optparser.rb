@@ -45,6 +45,10 @@ module GeneratePuppetfile
           options[:debug] = true
         end
 
+        opts.on_tail('-i', '--ignore-comments', 'Ignore comments') do
+          options[:ignore_comments] = true
+        end
+
         opts.on_tail('-v', '--version', 'Show version') do
           puts "generate-puppetfile v#{GeneratePuppetfile::VERSION}"
           exit

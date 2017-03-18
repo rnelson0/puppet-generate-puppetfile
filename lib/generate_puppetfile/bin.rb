@@ -264,6 +264,9 @@ forge 'http://forge.puppetlabs.com'
         puppetfile_contents += line.to_s
       end unless extras == []
 
+      # Strip out all contents with --ignore_comments
+      puppetfile_contents.gsub! /^#.*$\n/ ,'' if @options[:ignore_comments]
+
       puppetfile_contents
     end
 
