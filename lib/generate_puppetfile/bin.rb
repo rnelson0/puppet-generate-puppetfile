@@ -10,7 +10,7 @@ require 'colorize'
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](, ['\"](\\d\.\\d\.\\d)['\"])?", Regexp::IGNORECASE)
+    Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\\s+['\"](\\d+\.\\d+\.\\d+)['\"])?", Regexp::IGNORECASE)
     @options = {}         # Options hash
     @workspace = nil      # Working directory for module download and inspection
     @module_data = {}     # key: modulename, value: version number
@@ -38,20 +38,36 @@ module GeneratePuppetfile
 
       helpmsg = "generate-puppetfile: try 'generate-puppetfile --help' for more information."
 
+      if (@options[:fixtures_only] && ! @options[:puppetfile] )
+        $stderr.puts "generate-puppetfile: --fixtures-only is only valid when a '-p <Puppetfile>' is used as well.\n".red
+        puts helpmsg
+        return 1
+      end
+
       if @args[0].nil? && (! @options[:puppetfile])
-        $stderr.puts 'generate-puppetfile: No modules or existing Puppetfile specified.'.red
+        $stderr.puts "generate-puppetfile: No modules or existing Puppetfile specified.\n".red
         puts helpmsg
         return 1
       end
 
       unless verify_puppet_exists
         $stderr.puts "generate-puppetfile: Could not find a 'puppet' executable.".red
-        $stderr.puts '  Please make puppet available in your path before trying again.'.red
+        $stderr.puts "  Please make puppet available in your path before trying again.\n".red
         return 1
       end
 
+
       forge_module_list = []
 
+      # When using --fixtures-only, simply parse the provided Puppetfile and get out
+      if @options[:fixtures_only]
+        @module_data = generate_module_data_from_Puppetfile
+        fixtures_data = generate_fixtures_data
+        write_fixtures_data(fixtures_data)
+        return 0
+      end
+
+      # For everything else, run through the whole thing
       if @args
         puts "\nProcessing modules from the command line...\n\n" if @options[:debug]
         cli_modules = []
@@ -86,7 +102,7 @@ module GeneratePuppetfile
       @modulepath = "--modulepath #{@workspace} "
 
       return 2 if download_modules(forge_module_list) == 2
-      @module_data = generate_module_data
+      @module_data = generate_module_data_from_modulepath
       puppetfile_contents = generate_puppetfile_contents(extras)
 
       if @download_errors == ''
@@ -182,6 +198,32 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       puppetfile_contents
     end
 
+    # Public: Read and parse the contents of an existing Puppetfile
+    def read_puppetfile_with_versions(puppetfile)
+      puppetfile_contents = {
+        modules: [],
+        extras: []
+      }
+
+      File.foreach(puppetfile) do |line|
+        if Module_Regex.match(line)
+          name    = Regexp.last_match(1)
+          version = Regexp.last_match(3)
+          print "    #{name} looks like a forge module.\n" if @options[:debug]
+          puppetfile_contents[:modules].push([name, version])
+        else
+          next if line =~ /^forge/
+          next if line =~ /^\s+$/
+          next if line =~ /#{Puppetfile_Header}/
+          next if line =~ /#{Extras_Note}/
+
+          puppetfile_contents[:extras].push(line)
+        end
+      end
+
+      puppetfile_contents
+    end
+
     # Public: Verify that Puppet is available in the path
     def verify_puppet_exists
       MakeMakefile::Logging.instance_variable_set(:@logfile, File::NULL)
@@ -217,8 +259,8 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       system(command)
     end
 
-    # Public: generate the module data the @workspace
-    def generate_module_data
+    # Public: generate the module data from the modulepath (@workspace)
+    def generate_module_data_from_modulepath
       command = "puppet module list #{@modulepath} 2>#{File::NULL}"
       puts "Calling '#{command}'" if @options[:debug]
       module_output = `#{command}`
@@ -234,6 +276,19 @@ Your Puppetfile has been generated. Copy and paste between the markers:
         modules[name] = version
         $stderr.puts "Module #{name} has a version of #{version}, it may be deprecated. For more information, visit https://forge.puppet.com/#{name}".blue if version =~ /999/ and ! @options[:silent]
       end
+      modules
+    end
+
+    # Public: generate the module data from an existing Puppetfile
+    def generate_module_data_from_Puppetfile
+      puppetfile_contents = read_puppetfile_with_versions(@options[:puppetfile])
+
+      modules = {}
+      puppetfile_contents[:modules].each do |name, version|
+        modules[name] = version
+        $stderr.puts "Module #{name} has a version of #{version}, it may be deprecated. For more information, visit https://forge.puppet.com/#{name}".blue if version =~ /999/ and ! @options[:silent]
+      end
+
       modules
     end
 
@@ -265,7 +320,7 @@ forge 'http://forge.puppetlabs.com'
       end unless extras == []
 
       # Strip out all contents with --ignore_comments
-      puppetfile_contents.gsub! /^#.*$\n/ ,'' if @options[:ignore_comments]
+      puppetfile_contents.gsub!(/^#.*$\n/, '') if @options[:ignore_comments]
 
       puppetfile_contents
     end
@@ -282,8 +337,6 @@ forge 'http://forge.puppetlabs.com'
 
     # Public: Generate a simple fixtures file.
     def generate_fixtures_data
-      puts "\nGenerating .fixtures.yml using module name #{@options[:modulename]}" unless @options[:silent]
-
       # Determine if there are symlinks, either for the default modulename, or for anything in the modulepath
       symlinks = []
       modulepath = ''
@@ -326,12 +379,15 @@ forge 'http://forge.puppetlabs.com'
       fixtures_data += "  forge_modules:\n" if @module_data != {}
       @module_data.keys.each do |modulename|
         shortname = modulename.split('/')[1]
-        version = @module_data[modulename]
-        fixtures_data += <<-EOF
+        version = @module_data[modulename] 
+        data = <<-EOF
     #{shortname}:
       repo: "#{modulename}"
       ref: "#{version}"
         EOF
+        data.gsub!(/^ *ref.*$\n/, '') unless version != nil
+
+        fixtures_data += data
       end
 
       fixtures_data
