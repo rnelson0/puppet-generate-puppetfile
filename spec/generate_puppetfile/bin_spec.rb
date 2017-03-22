@@ -149,4 +149,22 @@ describe GeneratePuppetfile::Bin do
       File.exists? './.fixtures.yml'
     end
   end
+
+  context 'when specifying a Puppetfile and fixtures only' do
+    let :args do
+      [
+        '-p',
+        'spec/Puppetfile',
+        '--fixtures-only',
+      ]
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
+    it 'should say that fixtures have been created' do
+      expect(subject.stdout).to include "Generating .fixtures.yml"
+    end
+    it 'should create .fixtures.yml' do
+      File.exists? './.fixtures.yml'
+    end
+  end
 end
