@@ -294,9 +294,13 @@ Your Puppetfile has been generated. Copy and paste between the markers:
 
     # Public: generate the list of modules in Puppetfile format from the @workspace
     def generate_forge_module_output
+      return '' if @module_data.empty?
+
+      max_length    = @module_data.keys.max_by {|mod| mod.length}.length + 3 # room for extra chars
       module_output = ''
-      @module_data.keys.each do |modulename|
-        module_output += "mod '#{modulename}', '#{@module_data[modulename]}'\n"
+
+      @module_data.each do |modulename, version|
+        module_output += sprintf("mod %-#{max_length}s '%s'\n", "'#{modulename}',", version)
       end
       module_output
     end
