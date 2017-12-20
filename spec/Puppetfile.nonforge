@@ -1,0 +1,6 @@
+forge 'http://forge.puppetlabs.com'
+
+mod 'puppetlabs/stdlib', '4.17.1' 
+mod 'pbg/ntp',
+  :git => 'https://github.com/bitfield/pbg-ntp.git',
+  :tag => '0.1.1'

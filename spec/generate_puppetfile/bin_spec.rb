@@ -84,11 +84,11 @@ describe GeneratePuppetfile::Bin do
     its(:exitstatus) { is_expected.to eq(1) }
   end
 
-  context 'when specifying a Puppetfile' do
+  context 'when specifying a valid Puppetfile' do
     let :args do
       [
         '-p',
-        'spec/Puppetfile',
+        'spec/Puppetfile.valid',
       ]
     end
 
@@ -98,11 +98,11 @@ describe GeneratePuppetfile::Bin do
     end
   end
 
-  context 'when specifying a Puppetfile and --ignore-comments' do
+  context 'when specifying a valid Puppetfile and --ignore-comments' do
     let :args do
       [
         '-p',
-        'spec/Puppetfile',
+        'spec/Puppetfile.valid',
         '--ignore-comments',
       ]
     end
@@ -113,12 +113,12 @@ describe GeneratePuppetfile::Bin do
     end
   end
 
-  context 'when specifying an invalid module name and a Puppetfile' do
+  context 'when specifying an invalid module name and a valid Puppetfile' do
     let :args do
       [
         'certs',
         '-p',
-        'spec/Puppetfile',
+        'spec/Puppetfile.valid',
       ]
     end
 
@@ -150,11 +150,11 @@ describe GeneratePuppetfile::Bin do
     end
   end
 
-  context 'when specifying a Puppetfile and fixtures only' do
+  context 'when specifying a valid Puppetfile and fixtures only' do
     let :args do
       [
         '-p',
-        'spec/Puppetfile',
+        'spec/Puppetfile.valid',
         '--fixtures-only',
       ]
     end
@@ -166,5 +166,16 @@ describe GeneratePuppetfile::Bin do
     it 'should create .fixtures.yml' do
       File.exists? './.fixtures.yml'
     end
+  end
+
+  context 'when a Puppetfile includes a non-forge module' do
+    let :args do
+      [
+        '-p',
+        'spec/Puppetfile.nonforge',
+      ]
+    end
+
+    its(:exitstatus) { is_expected.to eq(0) }
   end
 end
