@@ -21,7 +21,7 @@ Installing modules. This may take a few minutes.
 Your Puppetfile has been generated. Copy and paste between the markers:
 
 =======================================================================
-forge 'http://forge.puppetlabs.com'
+forge 'https://forge.puppet.com'
 
 # Modules discovered by generate-puppetfile
 mod 'echocat/nfs', '1.7.1'
@@ -48,7 +48,7 @@ Installing modules. This may take a few minutes.
 Your Puppetfile has been generated. Copy and paste between the markers:
 
 =======================================================================
-forge 'http://forge.puppetlabs.com'
+forge 'https://forge.puppet.com'
 
 # Modules discovered by generate-puppetfile
 mod 'ajjahn/dhcp', '0.2.0'

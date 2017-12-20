@@ -311,7 +311,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
     # extras is an array of strings
     def generate_puppetfile_contents(extras)
       puppetfile_contents = <<-EOF
-forge 'http://forge.puppetlabs.com'
+forge 'https://forge.puppet.com'
 
 #{Puppetfile_Header}
       EOF
