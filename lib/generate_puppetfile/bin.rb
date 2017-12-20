@@ -10,7 +10,7 @@ require 'colorize'
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\\s+['\"](\\d+\.\\d+\.\\d+)['\"])?", Regexp::IGNORECASE)
+    Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\\s+['\"](\\d+\.\\d+\.\\d+)['\"])?\\s+$", Regexp::IGNORECASE)
     @options = {}         # Options hash
     @workspace = nil      # Working directory for module download and inspection
     @module_data = {}     # key: modulename, value: version number
