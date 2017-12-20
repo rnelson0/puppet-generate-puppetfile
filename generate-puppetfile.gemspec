@@ -27,7 +27,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec-its', '~> 1'
   s.add_development_dependency 'json', '~> 1'
   s.add_development_dependency 'puppet'
-  s.add_development_dependency 'rubocop', '0.39.0'
   s.add_development_dependency 'github_changelog_generator'
   s.add_development_dependency 'multi_json' # For some reason, github_changelog_generator requires this but does not include it
 end
