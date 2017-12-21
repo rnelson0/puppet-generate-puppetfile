@@ -11,11 +11,16 @@ require 'uri'
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_Regex        = Regexp.new("^\\s*mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\\s+['\"](\\d+\.\\d+\.\\d+)['\"])?\\s*$", Regexp::IGNORECASE)
-    Repository_Regex    = Regexp.new("^\\s*mod\\s+['\"](\\w+)['\"]\\s*,\\s*$", Regexp::IGNORECASE)
-    Location_Only_Regex = Regexp.new("^\\s+:git\\s+=>\\s+['\"](\\S+)['\"]\\s*$", Regexp::IGNORECASE)
-    Location_Plus_Regex = Regexp.new("^\\s+:git\\s+=>\\s+['\"](\\S+)['\"]\\s*,$", Regexp::IGNORECASE)
-    Type_ID_Regex       = Regexp.new("^\\s+:(\\w+)\\s+=>\\s+['\"](\\S+)['\"]\\s*$", Regexp::IGNORECASE)
+    Module_Regex        = %r{^\s*mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\s+['\"](\d+\.\d+\.\d+)['\"])?\s*$}
+    Repository_Regex    = %r{^\s*mod\s+['\"](\w+)['\"]\s*,\s*$}
+    Location_Only_Regex = %r{^\s+:git\s+=>\s+['\"](\S+)['\"]\s*$}
+    Location_Plus_Regex = %r{^\s+:git\s+=>\s+['\"](\S+)['\"]\s*,\s*$}
+    Type_ID_Regex       = %r{^\s+:(\w+)\s+=>\s+['\"](\S+)['\"]\s*$}
+    Forge_Regex         = %r{^forge}
+    Blanks_Regex        = %r{^\s*$}
+    Comments_Regex      = %r{^\s*#}
+    Skipall_Regex       = %r{^forge|^\s*$|^#}
+
     Silence = ('>' + File::NULL.to_str + ' 2>&1 ').freeze
     Puppetfile_Header = '# Modules discovered by generate-puppetfile'.freeze
     Extras_Note = '# Discovered elements from existing Puppetfile'.freeze
@@ -195,8 +200,8 @@ Your Puppetfile has been generated. Copy and paste between the markers:
           print "    #{name} looks like a forge module.\n" if @options[:debug]
           puppetfile_contents[:modules].push(name)
         else
-          next if line =~ /^forge/
-          next if line =~ /^\s+$/
+          next if line =~ Forge_Regex
+          next if line =~ Blanks_Regex
           next if line =~ /#{Puppetfile_Header}/
           next if line =~ /#{Extras_Note}/
 
@@ -221,8 +226,8 @@ Your Puppetfile has been generated. Copy and paste between the markers:
           print "    #{name} looks like a forge module.\n" if @options[:debug]
           puppetfile_contents[:modules].push([name, version])
         else
-          next if line =~ /^forge/
-          next if line =~ /^\s+$/
+          next if line =~ Forge_Regex
+          next if line =~ Blanks_Regex
           next if line =~ /#{Puppetfile_Header}/
           next if line =~ /#{Extras_Note}/
 
@@ -310,15 +315,14 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       File.open(@options[:puppetfile], 'r') do |fh|
         while (line = fh.gets) != nil
           # Skip blank lines, comments, anything that looks like a forge module
-          next if line =~ /^forge /
-          next if line =~ /^s+$|^#/
+          next if line =~ Skipall_Regex
           next if Module_Regex.match(line)
           # When we see /mod 'modulename',/ it is possibly a properly formatted fixture
           if Repository_Regex.match(line)
             complete = false
             name = Regexp.last_match(1)
             while (line = fh.gets) != nil
-              next if line =~ /^\s*$\^#/
+              next if line =~ Skipall_Regex
               if Location_Only_Regex.match(line)
                 # The Puppetfile may specify just a location /:git => 'https://github.com/author/puppet-modulename'/
                 # We do not validate the URI protocol, just that it is a valid URI
@@ -336,7 +340,7 @@ Your Puppetfile has been generated. Copy and paste between the markers:
                 #   :ref => '1.0.0'
                 location = Regexp.last_match(1)
                 while (line = fh.gets) != nil
-                  next if line =~ /^\s*$|^#/
+                  next if line =~ Skipall_Regex
                   if Type_ID_Regex.match(line)
                     type = Regexp.last_match(1)
                     id   = Regexp.last_match(2)
