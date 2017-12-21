@@ -6,15 +6,16 @@ require 'tempfile'
 require 'json'
 require 'mkmf'
 require 'colorize'
+require 'uri'
 
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_Regex = Regexp.new("mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\\s+['\"](\\d+\.\\d+\.\\d+)['\"])?\\s+$", Regexp::IGNORECASE)
-    @options = {}         # Options hash
-    @workspace = nil      # Working directory for module download and inspection
-    @module_data = {}     # key: modulename, value: version number
-    @download_errors = '' # A list of errors encountered while downloading modules. Should remain empty.
+    Module_Regex        = Regexp.new("^\\s*mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\\s+['\"](\\d+\.\\d+\.\\d+)['\"])?\\s*$", Regexp::IGNORECASE)
+    Repository_Regex    = Regexp.new("^\\s*mod\\s+['\"](\\w+)['\"]\\s*,\\s*$", Regexp::IGNORECASE)
+    Location_Only_Regex = Regexp.new("^\\s+:git\\s+=>\\s+['\"](\\S+)['\"]\\s*$", Regexp::IGNORECASE)
+    Location_Plus_Regex = Regexp.new("^\\s+:git\\s+=>\\s+['\"](\\S+)['\"]\\s*,$", Regexp::IGNORECASE)
+    Type_ID_Regex       = Regexp.new("^\\s+:(\\w+)\\s+=>\\s+['\"](\\S+)['\"]\\s*$", Regexp::IGNORECASE)
     Silence = ('>' + File::NULL.to_str + ' 2>&1 ').freeze
     Puppetfile_Header = '# Modules discovered by generate-puppetfile'.freeze
     Extras_Note = '# Discovered elements from existing Puppetfile'.freeze
@@ -28,6 +29,11 @@ module GeneratePuppetfile
     #   GeneratePuppetfile::Bin.new(ARGV).run
     def initialize(args)
       @args = args
+      @options = {}         # Options hash
+      @workspace = nil      # Working directory for module download and inspection
+      @module_data = {}     # key: modulename, value: version number
+      @repository_data = [] # Non-forge modules. Array of hashes containing name, location, type, and ID
+      @download_errors = '' # A list of errors encountered while downloading modules. Should remain empty.
     end
 
     # Public: Run generate-puppetfile at the command line.
@@ -60,8 +66,9 @@ module GeneratePuppetfile
       forge_module_list = []
 
       # When using --fixtures-only, simply parse the provided Puppetfile and get out
-      if @options[:fixtures_only]
+      if @options[:fixtures_only] && @options[:puppetfile]
         @module_data = generate_module_data_from_Puppetfile
+        @repository_data = generate_repository_data_from_Puppetfile
         fixtures_data = generate_fixtures_data
         write_fixtures_data(fixtures_data)
         return 0
@@ -81,6 +88,7 @@ module GeneratePuppetfile
       end
 
       puppetfile_contents = {}
+      # Currently, ALL statements not including a forge module are listed as extras. The @repository_data should be removed from the extras eventually (#54)
       extras = []
       if @options[:puppetfile]
         puts "\nProcessing the puppetfile '#{@options[:puppetfile]}'...\n\n" if @options[:debug]
@@ -110,6 +118,7 @@ module GeneratePuppetfile
         display_puppetfile(puppetfile_contents) unless @options[:silent]
 
         if @options[:create_fixtures]
+          @repository_data = generate_repository_data_from_Puppetfile if @options[:puppetfile]
           fixtures_data = generate_fixtures_data
           write_fixtures_data(fixtures_data)
         end
@@ -292,6 +301,74 @@ Your Puppetfile has been generated. Copy and paste between the markers:
       modules
     end
 
+    # Public: generate the ad hoc repository (non-forge module) data from an existing Puppetfile
+    #   Returns an array of hashes with keys name, location, type, id
+    def generate_repository_data_from_Puppetfile
+      repositories = []
+
+      # Open the Puppetfile
+      File.open(@options[:puppetfile], 'r') do |fh|
+        while (line = fh.gets) != nil
+          # Skip blank lines, comments, anything that looks like a forge module
+          next if line =~ /^forge /
+          next if line =~ /^s+$|^#/
+          next if Module_Regex.match(line)
+          # When we see /mod 'modulename',/ it is possibly a properly formatted fixture
+          if Repository_Regex.match(line)
+            complete = false
+            name = Regexp.last_match(1)
+            while (line = fh.gets) != nil
+              next if line =~ /^\s*$\^#/
+              if Location_Only_Regex.match(line)
+                # The Puppetfile may specify just a location /:git => 'https://github.com/author/puppet-modulename'/
+                # We do not validate the URI protocol, just that it is a valid URI
+                location = Regexp.last_match(1)
+                puts "Found module #{name} with location #{location}" if @options[:debug]
+                unless location.match(URI.regexp)
+                  puts "#{location} is not a valid URI, skipping this repo" if @options[:debug]
+                  break
+                end
+                repositories << {name: name, location: location}
+                complete = true
+              elsif Location_Plus_Regex.match(line)
+                # Or it may provide more, with a trailing comma
+                #   :git => 'https://github.com/author/puppet-modulename',
+                #   :ref => '1.0.0'
+                location = Regexp.last_match(1)
+                while (line = fh.gets) != nil
+                  next if line =~ /^\s*$|^#/
+                  if Type_ID_Regex.match(line)
+                    type = Regexp.last_match(1)
+                    id   = Regexp.last_match(2)
+                    puts "Found module #{name} with location #{location}, #{type} of #{id}" if @options[:debug]
+                    unless location.match(URI.regexp)
+                      puts "#{location} is not a valid URI, skipping this repo" if @options[:debug]
+                      break
+                    end
+                    repositories << {name: name, location: location, type: type, id: id}
+                    complete = true
+                  else
+                    # If the :git line ends with a comma but no type/ID is found, ignore it, we cannot properly determine the fixture
+                    puts "Found module #{name} at location #{location}. Expected type/ID information but did not find any, skipping." if @options[:debug]
+                    complete = true
+                  end
+                  break if complete
+                end
+              else
+                # If the /mod 'modulename',/ line is not followed with a :git string, ignore it, we cannot properly determine the fixture
+                puts "Found a reference to module #{name} but no location (:git) was provided, skipping." if @options[:debug]
+                complete = true
+              end
+              break if complete
+            end
+          end
+        end
+      end
+
+      repositories
+    end
+
+
     # Public: generate the list of modules in Puppetfile format from the @workspace
     def generate_forge_module_output
       return '' if @module_data.empty?
@@ -380,18 +457,42 @@ forge 'https://forge.puppet.com'
         end
       end
 
-      fixtures_data += "  forge_modules:\n" if @module_data != {}
-      @module_data.keys.each do |modulename|
-        shortname = modulename.split('/')[1]
-        version = @module_data[modulename] 
-        data = <<-EOF
+      unless @repository_data.empty?
+        fixtures_data += "  repositories:\n"
+        @repository_data.each do |repodata|
+          # Each repository has two or  pieces of data
+          #   Mandatory: the module name, the URI/location
+          #   Optional: the type (ref, branch, commit, etc.) and ID (tag, branch name, commit hash, etc.)
+          name      = repodata[:name]
+          location  = repodata[:location]
+          type      = repodata[:type]
+          id        = repodata[:id]
+
+          data = <<-EOF
+    #{name}:
+      repo: "#{location}"
+          EOF
+          data += "      #{type}: \"#{id}\"\n" if (type && id)
+
+          fixtures_data += data
+        end
+      end
+
+
+      unless @module_data.empty?
+        fixtures_data += "  forge_modules:\n"
+        @module_data.keys.each do |modulename|
+          shortname = modulename.split('/')[1]
+          version = @module_data[modulename] 
+          data = <<-EOF
     #{shortname}:
       repo: "#{modulename}"
       ref: "#{version}"
-        EOF
-        data.gsub!(/^ *ref.*$\n/, '') unless version != nil
+          EOF
+          data.gsub!(/^ *ref.*$\n/, '') unless version != nil
 
-        fixtures_data += data
+          fixtures_data += data
+        end
       end
 
       fixtures_data
