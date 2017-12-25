@@ -20,6 +20,16 @@ class CommandRun
     $stdout = STDOUT
     $stderr = STDERR
   end
+
+end
+
+def file_cleanup()
+  [
+    'Puppetfile',
+    '.fixtures.yml',
+  ].each do |tempfile|
+    File.delete(tempfile) if File.exists?(tempfile)
+  end
 end
 
 describe GeneratePuppetfile::Bin do
@@ -32,13 +42,12 @@ describe GeneratePuppetfile::Bin do
     CommandRun.new(sane_args)
   end
 
-  after(:each) do
-    [
-      'Puppetfile',
-      '.fixtures.yml',
-    ].each do |tempfile|
-      #File.delete(tempfile) if File.exists?(tempfile)
-    end
+  before(:all) do
+    file_cleanup()
+  end
+
+  after(:all) do
+    file_cleanup()
   end
 
   context 'with hyphens in module name' do
@@ -113,12 +122,12 @@ describe GeneratePuppetfile::Bin do
     end
   end
 
-  context 'when specifying an invalid module name and a valid Puppetfile' do
+  context 'when specifying a valid Puppetfile and an invalid module name' do
     let :args do
       [
-        'certs',
         '-p',
         'spec/Puppetfile.valid',
+        'certs',
       ]
     end
 
@@ -141,6 +150,8 @@ describe GeneratePuppetfile::Bin do
       ]
     end
 
+    file_cleanup()
+
     its(:exitstatus) { is_expected.to eq(0) }
     it 'should say that fixtures have been created' do
       expect(subject.stdout).to include "Generating .fixtures.yml"
@@ -159,12 +170,45 @@ describe GeneratePuppetfile::Bin do
       ]
     end
 
+    file_cleanup()
+
     its(:exitstatus) { is_expected.to eq(0) }
     it 'should say that fixtures have been created' do
       expect(subject.stdout).to include "Generating .fixtures.yml"
     end
     it 'should create .fixtures.yml' do
       File.exists? './.fixtures.yml'
+    end
+  end
+
+  context 'when specifying a valid Puppetfile with non-forge modules and fixtures only' do
+    let :args do
+      [
+        '-p',
+        'spec/Puppetfile.complexfixtures',
+        '--fixtures-only',
+      ]
+    end
+
+    file_cleanup()
+    its(:exitstatus) { is_expected.to eq(0) }
+    it 'should say that fixtures have been created' do
+      expect(subject.stdout).to include "Generating .fixtures.yml"
+    end
+    it 'should create .fixtures.yml' do
+      File.exists? './.fixtures.yml'
+    end
+    it 'should add the non-forge modules to the fixtures' do
+      fixture_data = <<EOF
+  repositories:
+    ntp:
+      repo: "https://github.com/example-ntp.git"
+      tag: "0.1.1"
+    motd:
+      repo: "https://github.com/example-motd.git"
+      tag: "1.0.0"
+EOF
+      expect(File.read('./.fixtures.yml')).to include(fixture_data)
     end
   end
 
