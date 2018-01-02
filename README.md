@@ -101,19 +101,10 @@ mod 'lab_config',
 =======================================================================
 ```
 
-## Changes
-Documentation of important pre-1.0.0 changes
-
-* *0.10.0*: `--fixtures` has been replaced with `--create-fixtures`. `-f` is still an alias for this argument.
-
 ## Limitations
 
-* Parsing of an existing Puppetfile is naive. Anything that doesn't look like a forge module is preserved and then added to the end of the new Puppetfile. Verify that no ordering errors are introduced before using the new file.
-
-## Thanks
-Many thanks to the following people for contributing to generate-puppetfile
-* [Tomy Lobo](https://github.com/TomyLobo)
-* [Ben Ford](https://github.com/binford2k)
+* There is no defined standard for a `Puppetfile`'s contents. `generate-puppetfile` knows about some of the most common types of module references and attempts to treat them as references instead of strings. Any unknown references will be appended as raw content following the known references.
+* Verify that no ordering errors are introduced before using the new file.
 
 ## Contributing
 

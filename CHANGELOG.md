@@ -1,5 +1,39 @@
 # Change Log
 
+## [v1.0.0](https://github.com/rnelson0/puppet-generate-puppetfile/tree/v1.0.0) (2018-01-02)
+[Full Changelog](https://github.com/rnelson0/puppet-generate-puppetfile/compare/v0.11.0...v1.0.0)
+
+**Closed issues:**
+
+- Unsecure forge url for generated Puppetfile [\#58](https://github.com/rnelson0/puppet-generate-puppetfile/issues/58)
+- generate-puppetfile ignores Git modules whose name contains a slash [\#56](https://github.com/rnelson0/puppet-generate-puppetfile/issues/56)
+- Add support for git repos in .fixture.yml [\#54](https://github.com/rnelson0/puppet-generate-puppetfile/issues/54)
+- Add support for updating from git [\#25](https://github.com/rnelson0/puppet-generate-puppetfile/issues/25)
+
+**Merged pull requests:**
+
+- Process free-form repositories in a Puppetfile for fixtures [\#62](https://github.com/rnelson0/puppet-generate-puppetfile/pull/62) ([rnelson0](https://github.com/rnelson0))
+- The forge module regex was not properly terminated by looking for end of line [\#61](https://github.com/rnelson0/puppet-generate-puppetfile/pull/61) ([rnelson0](https://github.com/rnelson0))
+- Remove rubocop dependency [\#60](https://github.com/rnelson0/puppet-generate-puppetfile/pull/60) ([rnelson0](https://github.com/rnelson0))
+- Update the forgeurl to use https [\#59](https://github.com/rnelson0/puppet-generate-puppetfile/pull/59) ([rnelson0](https://github.com/rnelson0))
+- Format the Puppetfile into columns [\#57](https://github.com/rnelson0/puppet-generate-puppetfile/pull/57) ([binford2k](https://github.com/binford2k))
+
+## [v0.11.0](https://github.com/rnelson0/puppet-generate-puppetfile/tree/v0.11.0) (2017-03-22)
+[Full Changelog](https://github.com/rnelson0/puppet-generate-puppetfile/compare/0.10.0...v0.11.0)
+
+**Closed issues:**
+
+- accept 'forge' style module name as an argument [\#49](https://github.com/rnelson0/puppet-generate-puppetfile/issues/49)
+- Features: Remove all comments [\#44](https://github.com/rnelson0/puppet-generate-puppetfile/issues/44)
+- Bug: Incorrect dependency version [\#43](https://github.com/rnelson0/puppet-generate-puppetfile/issues/43)
+- Add option to just generate a .fixtures file and not update the versions in the Modulefile [\#37](https://github.com/rnelson0/puppet-generate-puppetfile/issues/37)
+
+**Merged pull requests:**
+
+- Add --fixtures-only option to generate fixtures without performing updates [\#53](https://github.com/rnelson0/puppet-generate-puppetfile/pull/53) ([rnelson0](https://github.com/rnelson0))
+- Add --ignore-comments flag [\#52](https://github.com/rnelson0/puppet-generate-puppetfile/pull/52) ([rnelson0](https://github.com/rnelson0))
+- Add ability to reference module as author-name. [\#51](https://github.com/rnelson0/puppet-generate-puppetfile/pull/51) ([rnelson0](https://github.com/rnelson0))
+
 ## [0.10.0](https://github.com/rnelson0/puppet-generate-puppetfile/tree/0.10.0) (2016-11-06)
 **Closed issues:**
 
@@ -22,6 +56,7 @@
 
 **Merged pull requests:**
 
+- Release 0.10.0 [\#47](https://github.com/rnelson0/puppet-generate-puppetfile/pull/47) ([rnelson0](https://github.com/rnelson0))
 - Fixtures symlink [\#46](https://github.com/rnelson0/puppet-generate-puppetfile/pull/46) ([rnelson0](https://github.com/rnelson0))
 - Release 0.9.11 [\#42](https://github.com/rnelson0/puppet-generate-puppetfile/pull/42) ([rnelson0](https://github.com/rnelson0))
 - Add ability to continue on download error [\#41](https://github.com/rnelson0/puppet-generate-puppetfile/pull/41) ([rnelson0](https://github.com/rnelson0))
