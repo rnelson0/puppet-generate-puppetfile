@@ -222,4 +222,26 @@ EOF
 
     its(:exitstatus) { is_expected.to eq(0) }
   end
+  
+  context 'when specifying a valid Puppetfile with capitalization in the module name' do
+    let :args do
+      [
+        '-p',
+        'spec/Puppetfile.capitalized',
+        '--fixtures-only',
+      ]
+    end
+
+    file_cleanup()
+    its(:exitstatus) { is_expected.to eq(0) }
+    it 'should say that fixtures have been created' do
+      expect(subject.stdout).to include "Generating .fixtures.yml"
+    end
+    it 'should create .fixtures.yml' do
+      File.exists? './.fixtures.yml'
+    end
+    it 'should add the capitalized module to the fixtures' do
+      expect(File.read('./.fixtures.yml')).to include('WhatsARanjit/node_manager')
+    end
+  end
 end
