@@ -3,5 +3,5 @@
 vendor/
 Gemfile.lock
 .bundle/
-Puppetfile
+/Puppetfile*
 .fixtures.yml
