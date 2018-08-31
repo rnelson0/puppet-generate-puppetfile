@@ -11,7 +11,7 @@ require 'uri'
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_Regex        = %r{^\s*mod ['"]([a-z0-9_]+\/[a-z0-9_]+)['"](,\s+['"](\d+\.\d+\.\d+)['"])?\s*(?:#.*)?$}i
+    Module_Regex        = %r{^\s*mod ['"]([a-z0-9_]+[/-][a-z0-9_]+)['"](,\s+['"](\d+\.\d+\.\d+)['"])?\s*(?:#.*)?$}i
     Repository_Regex    = %r{^\s*mod\s+['"](\w+)['"]\s*,\s*(?:#.*)?$}i
     Location_Only_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*(?:#.*)?$}i
     Location_Plus_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*,\s*(?:#.*)?$}i
@@ -486,7 +486,7 @@ forge 'https://forge.puppet.com'
       unless @module_data.empty?
         fixtures_data += "  forge_modules:\n"
         @module_data.keys.each do |modulename|
-          shortname = modulename.split('/')[1]
+          shortname = modulename.split(/[\/-]/)[1]
           version = @module_data[modulename] 
           data = <<-EOF
     #{shortname}:
