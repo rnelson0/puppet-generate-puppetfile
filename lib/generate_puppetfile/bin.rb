@@ -456,14 +456,14 @@ forge 'https://forge.puppet.com'
       fixtures_data = "fixtures:\n"
       if symlinks
         fixtures_data += "  symlinks:\n"
-        symlinks.each do |symlink|
+        symlinks.sort_by!{|symlink| symlink[:name]}.each do |symlink|
           fixtures_data += "    #{symlink[:name]}: #{symlink[:path]}\n"
         end
       end
 
       unless @repository_data.empty?
         fixtures_data += "  repositories:\n"
-        @repository_data.each do |repodata|
+        @repository_data.sort_by!{|repo| repo[:name]}.each do |repodata|
           # Each repository has two or  pieces of data
           #   Mandatory: the module name, the URI/location
           #   Optional: the type (ref, branch, commit, etc.) and ID (tag, branch name, commit hash, etc.)
@@ -485,7 +485,7 @@ forge 'https://forge.puppet.com'
 
       unless @module_data.empty?
         fixtures_data += "  forge_modules:\n"
-        @module_data.keys.each do |modulename|
+        @module_data.keys.sort_by!{|mod| mod.split(/[\/-]/)[1]}.each do |modulename|
           shortname = modulename.split(/[\/-]/)[1]
           version = @module_data[modulename] 
           data = <<-EOF
