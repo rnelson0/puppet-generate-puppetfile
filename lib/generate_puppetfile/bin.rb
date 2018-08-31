@@ -11,11 +11,11 @@ require 'uri'
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_Regex        = %r{^\s*mod ['"]([a-z0-9_]+\/[a-z0-9_]+)['"](,\s+['"](\d+\.\d+\.\d+)['"])?\s*$}i
-    Repository_Regex    = %r{^\s*mod\s+['"](\w+)['"]\s*,\s*$}i
-    Location_Only_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*$}i
-    Location_Plus_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*,\s*$}i
-    Type_ID_Regex       = %r{^\s+:(\w+)\s+=>\s+['"](\S+)['"]\s*$}i
+    Module_Regex        = %r{^\s*mod ['"]([a-z0-9_]+\/[a-z0-9_]+)['"](,\s+['"](\d+\.\d+\.\d+)['"])?\s*(?:#.*)?$}i
+    Repository_Regex    = %r{^\s*mod\s+['"](\w+)['"]\s*,\s*(?:#.*)?$}i
+    Location_Only_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*(?:#.*)?$}i
+    Location_Plus_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*,\s*(?:#.*)?$}i
+    Type_ID_Regex       = %r{^\s+:(\w+)\s+=>\s+['"](\S+)['"]\s*(?:#.*)?$}i
     Forge_Regex         = %r{^forge}
     Blanks_Regex        = %r{^\s*$}
     Comments_Regex      = %r{^\s*#}
