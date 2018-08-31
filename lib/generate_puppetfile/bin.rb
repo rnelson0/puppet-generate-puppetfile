@@ -476,7 +476,7 @@ forge 'https://forge.puppet.com'
     #{name}:
       repo: "#{location}"
           EOF
-          data += "      #{type}: \"#{id}\"\n" if (type && id)
+          data += "      #{type}: \"#{id}\"\n" unless @options[:latest_versions] || !type || !id
 
           fixtures_data += data
         end
@@ -491,9 +491,8 @@ forge 'https://forge.puppet.com'
           data = <<-EOF
     #{shortname}:
       repo: "#{modulename}"
-      ref: "#{version}"
           EOF
-          data.gsub!(/^ *ref.*$\n/, '') unless version != nil
+          data += "      ref: \"#{version}\"\n" unless @options[:latest_versions] || version.nil?
 
           fixtures_data += data
         end
