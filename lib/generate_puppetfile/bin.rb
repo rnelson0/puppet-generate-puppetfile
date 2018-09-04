@@ -435,6 +435,7 @@ forge 'https://forge.puppet.com'
         paths = modulepath.split(':').delete_if { |path| path =~ /^\$/ }
         paths.each do |path|
           Dir["#{path}/*"].each do |module_location|
+            next unless File.directory?(module_location)
             module_name = File.basename(module_location)
             module_path = module_location
             symlinks << {
