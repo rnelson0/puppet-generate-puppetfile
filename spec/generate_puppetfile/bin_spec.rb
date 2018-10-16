@@ -201,12 +201,12 @@ describe GeneratePuppetfile::Bin do
     it 'should add the non-forge modules to the fixtures' do
       fixture_data = <<EOF
   repositories:
-    ntp:
-      repo: "https://github.com/example-ntp.git"
-      tag: "0.1.1"
     motd:
       repo: "https://github.com/example-motd.git"
       tag: "1.0.0"
+    ntp:
+      repo: "https://github.com/example-ntp.git"
+      tag: "0.1.1"
 EOF
       expect(File.read('./.fixtures.yml')).to include(fixture_data)
     end
