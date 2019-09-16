@@ -11,11 +11,11 @@ require 'uri'
 module GeneratePuppetfile
   # Internal: The Bin class contains the logic for calling generate_puppetfile at the command line
   class Bin
-    Module_Regex        = %r{^\s*mod ['\"]([a-z0-9_]+\/[a-z0-9_]+)['\"](,\s+['\"](\d+\.\d+\.\d+)['\"])?\s*$}i
-    Repository_Regex    = %r{^\s*mod\s+['\"](\w+)['\"]\s*,\s*$}i
-    Location_Only_Regex = %r{^\s+:git\s+=>\s+['\"](\S+)['\"]\s*$}i
-    Location_Plus_Regex = %r{^\s+:git\s+=>\s+['\"](\S+)['\"]\s*,\s*$}i
-    Type_ID_Regex       = %r{^\s+:(\w+)\s+=>\s+['\"](\S+)['\"]\s*$}i
+    Module_Regex        = %r{^\s*mod ['"]([a-z0-9_]+[/-][a-z0-9_]+)['"](,\s+['"](\d+\.\d+\.\d+)['"])?\s*(?:#.*)?$}i
+    Repository_Regex    = %r{^\s*mod\s+['"](\w+)['"]\s*,\s*(?:#.*)?$}i
+    Location_Only_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*(?:#.*)?$}i
+    Location_Plus_Regex = %r{^\s+:git\s+=>\s+['"](\S+)['"]\s*,\s*(?:#.*)?$}i
+    Type_ID_Regex       = %r{^\s+:(\w+)\s+=>\s+['"](\S+)['"]\s*(?:#.*)?$}i
     Forge_Regex         = %r{^forge}
     Blanks_Regex        = %r{^\s*$}
     Comments_Regex      = %r{^\s*#}
@@ -435,6 +435,7 @@ forge 'https://forge.puppet.com'
         paths = modulepath.split(':').delete_if { |path| path =~ /^\$/ }
         paths.each do |path|
           Dir["#{path}/*"].each do |module_location|
+            next unless File.directory?(module_location)
             module_name = File.basename(module_location)
             module_path = module_location
             symlinks << {
@@ -456,14 +457,14 @@ forge 'https://forge.puppet.com'
       fixtures_data = "fixtures:\n"
       if symlinks
         fixtures_data += "  symlinks:\n"
-        symlinks.each do |symlink|
+        symlinks.sort_by!{|symlink| symlink[:name]}.each do |symlink|
           fixtures_data += "    #{symlink[:name]}: #{symlink[:path]}\n"
         end
       end
 
       unless @repository_data.empty?
         fixtures_data += "  repositories:\n"
-        @repository_data.each do |repodata|
+        @repository_data.sort_by!{|repo| repo[:name]}.each do |repodata|
           # Each repository has two or  pieces of data
           #   Mandatory: the module name, the URI/location
           #   Optional: the type (ref, branch, commit, etc.) and ID (tag, branch name, commit hash, etc.)
@@ -476,7 +477,7 @@ forge 'https://forge.puppet.com'
     #{name}:
       repo: "#{location}"
           EOF
-          data += "      #{type}: \"#{id}\"\n" if (type && id)
+          data += "      #{type}: \"#{id}\"\n" unless @options[:latest_versions] || !type || !id
 
           fixtures_data += data
         end
@@ -485,15 +486,14 @@ forge 'https://forge.puppet.com'
 
       unless @module_data.empty?
         fixtures_data += "  forge_modules:\n"
-        @module_data.keys.each do |modulename|
-          shortname = modulename.split('/')[1]
+        @module_data.keys.sort_by!{|mod| mod.split(/[\/-]/)[1]}.each do |modulename|
+          shortname = modulename.split(/[\/-]/)[1]
           version = @module_data[modulename] 
           data = <<-EOF
     #{shortname}:
       repo: "#{modulename}"
-      ref: "#{version}"
           EOF
-          data.gsub!(/^ *ref.*$\n/, '') unless version != nil
+          data += "      ref: \"#{version}\"\n" unless @options[:latest_versions] || version.nil?
 
           fixtures_data += data
         end
