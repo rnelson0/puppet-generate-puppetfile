@@ -100,6 +100,39 @@ mod 'lab_config',
   :git => 'git@github.com:puppetinabox/lab_config.git'
 =======================================================================
 ```
+#### extending puppet modules & bolt projects 
+
+Due to the nature of the generate-puppetfile gem it makes an excellent tool for developing the Puppetfile for [bolt projects]( https://puppet.com/docs/bolt/latest/bolt_project_directories.html). Seeing the simplest way to create a Bolt project is with the Puppet PDK this approach extends that use case. Add the following to your `.sync.yml` in a pdk managed module and run `pdk update`.zd
+
+```
+Gemfile:
+  optional:
+    ':development':
+      - gem: 'generate-puppetfile'
+        version: '~> 1.0
+```
+
+Add the following to `/rakelib/generate_puppetfile.rake` to create a rake target for the experimental `pdk bundle` feature. You can then use `pdk bundle exec rake generate_puppetfile` to generate the puppetfile based on the modules metadata.
+
+```
+require 'json'
+
+desc 'generate puppetfile'
+task :generate_puppetfile, [:mod] do |t, args| 
+    args.with_defaults(:mod => JSON.parse(File.read('metadata.json'))['name'])
+    sh "generate-puppetfile -c  #{args.mod}"
+end
+```
+Add the following to `/rakelib/generate_fixturesfile.rake` to create a rake target for the experimental `pdk bundle` feature. You can then use `pdk bundle exec rake generate_fixturesfile` to generate the `.fixtures.yaml` based on the module metadata to aid in testing with the `pdk test` feature.
+
+```
+desc 'generate fixtures'
+task :generate_fixturesfile do |t| 
+    mod = JSON.parse(File.read('metadata.json'))['name']
+    sh "generate-puppetfile -f -p ./Puppetfile #{mod} --fixtures-only -m #{mod}"
+end
+```
+
 
 ## Limitations
 
