@@ -123,7 +123,7 @@ task :generate_puppetfile, [:mod] do |t, args|
     sh "generate-puppetfile -c  #{args.mod}"
 end
 ```
-Additionally add the following to `/rakelib/generate_fixturesfile.rake` will add a task to the experimental `pdk bundle` feature you can then use `pdk bundle exec rake generate_fixturesfile` to generate the `.fixtures.yaml` based on the module metadata to aid in testing with the `pdk test` feature.  
+Add the following to `/rakelib/generate_fixturesfile.rake` to create a rake target for the experimental `pdk bundle` feature. You can then use `pdk bundle exec rake generate_fixturesfile` to generate the `.fixtures.yaml` based on the module metadata to aid in testing with the `pdk test` feature.
 
 ```
 desc 'generate fixtures'
