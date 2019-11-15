@@ -112,7 +112,7 @@ Gemfile:
         version: '~> 1.0
 ```
 
-Addition the following add to `/rakelib/generate_puppetfile.rake` will add a task to the experimental `pdk bundle` feature you can then use `pdk bundle exec rake generate_puppetfile` to generate the puppetfile based on the modules metadata.  
+Add the following to `/rakelib/generate_puppetfile.rake` to create a rake target for the experimental `pdk bundle` feature. You can then use `pdk bundle exec rake generate_puppetfile` to generate the puppetfile based on the modules metadata.
 
 ```
 require 'json'
