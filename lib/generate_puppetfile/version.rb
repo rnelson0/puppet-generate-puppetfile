@@ -1,3 +1,3 @@
 module GeneratePuppetfile
-  VERSION = '1.0.1.rc0'.freeze
+  VERSION = '1.1.0'.freeze
 end
